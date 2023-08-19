@@ -3,7 +3,6 @@ from types_universo import PhysicsRules, SystemRules
 import random
 from threading import Thread
 
-
 class Entrenador:
     def __init__(self):
         self.universo = Universo()
@@ -68,11 +67,8 @@ class Entrenador:
         for clave, valor in self.pesos.items():
             setattr(valoresSistema, clave, valor)
         self.universo = Universo(valoresSistema)
-        self.universo.valoresSistema.COLUMNAS = PhysicsRules.COLUMNAS
-        self.universo.valoresSistema.FILAS = PhysicsRules.FILAS
 
     def entrenarPerpetuo(self):
-        print("Tiempo sin estructura", self.tiempoSinEstructuras)
         if self.hayEstructuras(self.universo.nodos):
             self.tiempoSinEstructuras = 0
         else:
