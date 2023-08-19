@@ -1,61 +1,54 @@
 from types_universo import NodoInterface, IPhysicsRules
 from time_procedural import calcular_energia, intercambiar_cargas, relacionar_nodos
-import random
 from concurrent.futures import ThreadPoolExecutor, wait
+import cupy as cp
 
-
+# Funciones relacionadas con las cargas y la energía
 def cargas(nodo: NodoInterface, valores_sistema: IPhysicsRules):
-    if random.random() < valores_sistema.PROBABILIDAD_TRANSICION:
+    fluctuacion = (cp.random.random() * 2 - 1) * valores_sistema.FLUCTUACION_MAXIMA
+
+    if cp.random.random() < valores_sistema.PROBABILIDAD_TRANSICION:
         nodo.memoria.cargas = -nodo.memoria.cargas
 
-    fluctuacion = (random.random() * 2 - 1) * valores_sistema.FLUCTUACION_MAXIMA
-    nodo.memoria.cargas += fluctuacion
+    nodo.memoria.cargas += fluctuacion if cp.random.random() < 0.5 else -fluctuacion
 
-    if random.random() < 0.5:
-        nodo.memoria.cargas -= fluctuacion
-    else:
-        nodo.memoria.cargas += fluctuacion
-
-    if nodo.memoria.cargas > 0.5 and random.random() < valores_sistema.PROBABILIDAD_TUNEL:
+    if nodo.memoria.cargas > 0.5 and cp.random.random() < valores_sistema.PROBABILIDAD_TUNEL:
         nodo.memoria.cargas = 0
 
-    nodo.memoria.cargas = min(max(nodo.memoria.cargas, -1), 1)
-    nodo.memoria.energia = 1 - abs(nodo.memoria.cargas)
+    nodo.memoria.cargas = cp.min(cp.max(nodo.memoria.cargas, -1), 1).tolist()
+    nodo.memoria.energia = (1 - cp.abs(nodo.memoria.cargas)).tolist()
 
-def es_parte_de_grupo_circular(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecinos):
-    return (len(vecinos) >= valores_sistema.LIMITE_RELACIONAL and
-            len(nodo.memoria.relaciones) >= valores_sistema.LIMITE_RELACIONAL)  # Cambio aquí
-
-def obtener_vecinos(nodos, valores_sistema: IPhysicsRules, i, j):
-    FILAS = valores_sistema.FILAS
-    COLUMNAS = valores_sistema.COLUMNAS
-
-    indices_vecinos = [
-        (i - 1) * COLUMNAS + (j - 1) if i > 0 and j > 0 else -1,
-        (i - 1) * COLUMNAS + j if i > 0 else -1,
-        (i - 1) * COLUMNAS + (j + 1) if i > 0 and j < COLUMNAS - 1 else -1,
-        i * COLUMNAS + (j - 1) if j > 0 else -1,
-        i * COLUMNAS + (j + 1) if j < COLUMNAS - 1 else -1,
-        (i + 1) * COLUMNAS + (j - 1) if i < FILAS - 1 and j > 0 else -1,
-        (i + 1) * COLUMNAS + j if i < FILAS - 1 else -1,
-        (i + 1) * COLUMNAS + (j + 1) if i < FILAS - 1 and j < COLUMNAS - 1 else -1,
-    ]
-
-    return [nodos[indice] for indice in indices_vecinos if 0 <= indice < len(nodos)]
 
 def proceso_de_vida_o_muerte(nodo: NodoInterface):
     nodo.memoria.energia = calcular_energia(nodo)
 
+
+# Funciones relacionadas con la estructura del nodo y los vecinos
+def obtener_vecinos(nodos, valores_sistema: IPhysicsRules, i, j):
+    FILAS, COLUMNAS = valores_sistema.FILAS, valores_sistema.COLUMNAS
+    indices = [
+        (i + di) * COLUMNAS + (j + dj)
+        for di in range(-1, 2)
+        for dj in range(-1, 2)
+        if 0 <= i + di < FILAS and 0 <= j + dj < COLUMNAS and (di, dj) != (0, 0)
+    ]
+    return [nodos[indice] for indice in indices]
+
+
+def es_parte_de_grupo_circular(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecinos):
+    return (len(vecinos) >= valores_sistema.LIMITE_RELACIONAL and
+            len(nodo.memoria.relaciones) >= valores_sistema.LIMITE_RELACIONAL)
+
+
+# Función principal para el siguiente paso en la simulación
 def next_step(nodos, valores_sistema: IPhysicsRules, num_threads=4):
     step = valores_sistema.FILAS // num_threads
-    result = nodos.copy()
 
     def process_rows(start_row, end_row):
-        nonlocal result
         for i in range(start_row, end_row):
             for j in range(valores_sistema.COLUMNAS):
-                nodo = result[i * valores_sistema.COLUMNAS + j]
-                vecinos = obtener_vecinos(result, valores_sistema, i, j)
+                nodo = nodos[i * valores_sistema.COLUMNAS + j]
+                vecinos = obtener_vecinos(nodos, valores_sistema, i, j)
                 if not vecinos or not nodo:
                     print('Error al relacionar los nodos:', len(nodos))
                     continue
@@ -74,4 +67,4 @@ def next_step(nodos, valores_sistema: IPhysicsRules, num_threads=4):
         futures = [executor.submit(process_rows, i * step, (i + 1) * step if i != num_threads - 1 else valores_sistema.FILAS) for i in range(num_threads)]
         wait(futures)
 
-    return result
+    return nodos

@@ -7,8 +7,8 @@ class IPhysicsRules:
     PROBABILIDAD_VIDA_INICIAL: float
     LIMITE_EDAD: int
     REDUCCION_CARGA: float
-    CRECIMIENTO_X: int  # Número de filas a añadir en cada generación
-    CRECIMIENTO_Y: int  # Número de columnas a añadir en cada generación
+    CRECIMIENTO_X: int
+    CRECIMIENTO_Y: int
     UMBRAL_CARGA: float
     FACTOR_ESTABILIDAD: float
     LIMITE_RELACIONAL: int
@@ -64,7 +64,7 @@ class PhysicsRules(IPhysicsRules):
 
 
 class SystemRules:
-    TIEMPO_LIMITE_ESTRUCTURA = 20
+    TIEMPO_LIMITE_ESTRUCTURA = 50
     OBSERVACION_RELACIONES = 1
 
 

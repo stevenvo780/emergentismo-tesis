@@ -19,15 +19,14 @@ class Entrenador:
 
     def entrenamientoPerpetuo(self):
         while True:  # Puedes agregar una condición de salida si lo deseas
-            self.nextStepRecursivo()
+            self.nextStep()
 
-    def nextStepRecursivo(self):
+    def nextStep(self):
         self.universo.next()
         self.universo.tiempo += 1
         visualizar = self.universo.tiempo % self.tiempoLimiteSinEstructuras
         if visualizar == 0:
             self.entrenarPerpetuo()
-        self.nextStepRecursivo()
 
     def calcularRecompensa(self, nodos):
         return self.detectarEstructuras(nodos)
@@ -68,8 +67,6 @@ class Entrenador:
         for clave, valor in self.pesos.items():
             setattr(valoresSistema, clave, valor)
         self.universo = Universo(valoresSistema)
-        self.universo.valoresSistema.COLUMNAS = PhysicsRules.COLUMNAS
-        self.universo.valoresSistema.FILAS = PhysicsRules.FILAS
 
     def entrenarPerpetuo(self):
         if self.hayEstructuras(self.universo.nodos):
