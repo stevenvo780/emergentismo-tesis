@@ -46,7 +46,6 @@ class Universo:
                 self.nodos.append(nodo)
 
     def next(self):
-        print(self.valoresSistema.__repr__());
         self.nodos = next_step(self.nodos, self.valoresSistema)
         if self.tiempo % 100 == 0:
             # Asumiendo que expandirEspacio es definido en otro lugar
