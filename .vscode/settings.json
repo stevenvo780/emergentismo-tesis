@@ -1,0 +1,22 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.autopep8"
+  },
+  "python.formatting.provider": "none",
+  "cSpell.words": [
+    "configuracion",
+    "Configuracion",
+    "cytoscape",
+    "Despausar",
+    "energia",
+    "Energia",
+    "fluctuacion",
+    "FLUCTUACION",
+    "generacion",
+    "Generacion",
+    "OBSERVACION",
+    "relacion",
+    "TRANSICION",
+    "TUNEL"
+  ]
+}
