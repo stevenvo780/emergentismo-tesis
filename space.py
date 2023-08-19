@@ -1,6 +1,8 @@
 from types_universo import NodoInterface, IPhysicsRules
 from time_procedural import calcular_energia, intercambiar_cargas, relacionar_nodos
 import random
+from concurrent.futures import ThreadPoolExecutor, wait
+
 
 def cargas(nodo: NodoInterface, valores_sistema: IPhysicsRules):
     if random.random() < valores_sistema.PROBABILIDAD_TRANSICION:
@@ -42,26 +44,34 @@ def obtener_vecinos(nodos, valores_sistema: IPhysicsRules, i, j):
     return [nodos[indice] for indice in indices_vecinos if 0 <= indice < len(nodos)]
 
 def proceso_de_vida_o_muerte(nodo: NodoInterface):
-    nodo.memoria.energia = calcular_energia(nodo)  # Cambio aquí
+    nodo.memoria.energia = calcular_energia(nodo)
 
-def next_step(nodos, valores_sistema: IPhysicsRules):
-    nueva_generacion = nodos
-    for i in range(valores_sistema.FILAS):
-        for j in range(valores_sistema.COLUMNAS):
-            nodo = nueva_generacion[i * valores_sistema.COLUMNAS + j]
-            vecinos = obtener_vecinos(nueva_generacion, valores_sistema, i, j)
-            if not vecinos or not nodo:
-                print('Error al relacionar los nodos:', len(nodos))
-                continue
-            es_grupo_circular = es_parte_de_grupo_circular(valores_sistema, nodo, vecinos)
-            cargas(nodo, valores_sistema)
-            proceso_de_vida_o_muerte(nodo)
-            relacionar_nodos(valores_sistema, nodo, vecinos)
-            for vecino in vecinos:
-                if (
-                    (nodo.memoria.cargas < 0 and vecino.memoria.cargas > 0) or
-                    (nodo.memoria.cargas > 0 and vecino.memoria.cargas < 0)
-                ):
-                    intercambiar_cargas(valores_sistema, nodo, vecino, es_grupo_circular)
+def next_step(nodos, valores_sistema: IPhysicsRules, num_threads=4):
+    step = valores_sistema.FILAS // num_threads
+    result = nodos.copy()
 
-    return nueva_generacion
+    def process_rows(start_row, end_row):
+        nonlocal result
+        for i in range(start_row, end_row):
+            for j in range(valores_sistema.COLUMNAS):
+                nodo = result[i * valores_sistema.COLUMNAS + j]
+                vecinos = obtener_vecinos(result, valores_sistema, i, j)
+                if not vecinos or not nodo:
+                    print('Error al relacionar los nodos:', len(nodos))
+                    continue
+                es_grupo_circular = es_parte_de_grupo_circular(valores_sistema, nodo, vecinos)
+                cargas(nodo, valores_sistema)
+                proceso_de_vida_o_muerte(nodo)
+                relacionar_nodos(valores_sistema, nodo, vecinos)
+                for vecino in vecinos:
+                    if (
+                        (nodo.memoria.cargas < 0 and vecino.memoria.cargas > 0) or
+                        (nodo.memoria.cargas > 0 and vecino.memoria.cargas < 0)
+                    ):
+                        intercambiar_cargas(valores_sistema, nodo, vecino, es_grupo_circular)
+
+    with ThreadPoolExecutor() as executor:
+        futures = [executor.submit(process_rows, i * step, (i + 1) * step if i != num_threads - 1 else valores_sistema.FILAS) for i in range(num_threads)]
+        wait(futures)
+
+    return result

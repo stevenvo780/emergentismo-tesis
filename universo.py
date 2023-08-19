@@ -5,7 +5,6 @@ import random
 from datetime import datetime
 from typing import Dict, List
 
-
 class Universo:
     def __init__(self, valoresSistema: 'IPhysicsRules' = PhysicsRules()):
         self.nodos: List['NodoInterface'] = []
