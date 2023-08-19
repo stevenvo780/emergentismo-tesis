@@ -12,7 +12,6 @@ class Entrenador:
             "__") and not isinstance(getattr(PhysicsRules, key), (int, float))}
         self.tasaDeAprendizaje = 0.05
         self.tiempoSinEstructuras = 0
-        print(self.universo.tiempo)
 
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.entrenamientoPerpetuo)
@@ -25,7 +24,6 @@ class Entrenador:
     def nextStepRecursivo(self):
         self.universo.next()
         self.universo.tiempo += 1
-        print(self.universo.tiempo)
         visualizar = self.universo.tiempo % self.tiempoLimiteSinEstructuras
         if visualizar == 0:
             self.entrenarPerpetuo()
