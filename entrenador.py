@@ -72,7 +72,6 @@ class Entrenador:
         self.universo.valoresSistema.FILAS = PhysicsRules.FILAS
 
     def entrenarPerpetuo(self):
-        print("Tiempo sin estructura", self.tiempoSinEstructuras)
         if self.hayEstructuras(self.universo.nodos):
             self.tiempoSinEstructuras = 0
         else:
