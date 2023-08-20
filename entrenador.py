@@ -21,12 +21,12 @@ class Entrenador:
 
     def crear_red_neuronal(self):
         model = Sequential()
-        model.add(Dense(12, input_dim=len(
-            self.claves_parametros), activation='relu'))
+        model.add(Dense(12, input_dim=len(self.claves_parametros), activation='relu'))
         model.add(Dense(8, activation='relu'))
-        model.add(Dense(len(self.claves_parametros), activation='linear'))
+        model.add(Dense(len(self.claves_parametros), activation='sigmoid')) # Cambio a sigmoide
         model.compile(loss='mse', optimizer='adam')
         return model
+
 
     def fitness_function(self, neural_network):
         valores = self.universo.valoresSistema
@@ -50,8 +50,7 @@ class Entrenador:
 
     def mutate(self, neural_network):
         for i in range(len(neural_network.get_weights())):
-            neural_network.get_weights(
-            )[i] += np.random.normal(0, 0.1, neural_network.get_weights()[i].shape)
+            neural_network.get_weights()[i] += np.random.normal(0, 0.005, neural_network.get_weights()[i].shape)
 
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.entrenamientoPerpetuo)
