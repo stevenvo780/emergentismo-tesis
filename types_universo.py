@@ -1,19 +1,13 @@
 from typing import List, Callable
 
+
 class IPhysicsRules:
     FILAS: int
     COLUMNAS: int
     PROBABILIDAD_VIDA_INICIAL: float
-    LIMITE_EDAD: int
     REDUCCION_CARGA: float
-    CRECIMIENTO_X: int  # Número de filas a añadir en cada generación
-    CRECIMIENTO_Y: int  # Número de columnas a añadir en cada generación
     UMBRAL_CARGA: float
     FACTOR_ESTABILIDAD: float
-    LIMITE_RELACIONAL: int
-    DISTANCIA_MAXIMA_RELACION: int
-    ESPERADO_EMERGENTE: int
-    FACTOR_RELACION: int
     ENERGIA: float
     PROBABILIDAD_TRANSICION: float
     FLUCTUACION_MAXIMA: float
@@ -25,33 +19,18 @@ class PhysicsRules(IPhysicsRules):
                  FILAS=100,
                  COLUMNAS=100,
                  PROBABILIDAD_VIDA_INICIAL=0.99999,
-                 LIMITE_EDAD=5,
-                 REDUCCION_CARGA=0.01,
-                 CRECIMIENTO_X=2,
-                 CRECIMIENTO_Y=2,
                  UMBRAL_CARGA=0.1,
-                 FACTOR_ESTABILIDAD=0.2,
-                 LIMITE_RELACIONAL=3,
-                 DISTANCIA_MAXIMA_RELACION=6,
-                 ESPERADO_EMERGENTE=3,
-                 FACTOR_RELACION=10,
                  ENERGIA=0.01,
                  PROBABILIDAD_TRANSICION=0.01,
                  FLUCTUACION_MAXIMA=0.01,
-                 PROBABILIDAD_TUNEL=0.01):
+                 PROBABILIDAD_TUNEL=0.01,
+                 FACTOR_ESTABILIDAD=0.2,
+                 ):
         self.FILAS = FILAS
         self.COLUMNAS = COLUMNAS
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
-        self.LIMITE_EDAD = LIMITE_EDAD
-        self.REDUCCION_CARGA = REDUCCION_CARGA
-        self.CRECIMIENTO_X = CRECIMIENTO_X
-        self.CRECIMIENTO_Y = CRECIMIENTO_Y
         self.UMBRAL_CARGA = UMBRAL_CARGA
         self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
-        self.LIMITE_RELACIONAL = LIMITE_RELACIONAL
-        self.DISTANCIA_MAXIMA_RELACION = DISTANCIA_MAXIMA_RELACION
-        self.ESPERADO_EMERGENTE = ESPERADO_EMERGENTE
-        self.FACTOR_RELACION = FACTOR_RELACION
         self.ENERGIA = ENERGIA
         self.PROBABILIDAD_TRANSICION = PROBABILIDAD_TRANSICION
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
@@ -65,7 +44,17 @@ class PhysicsRules(IPhysicsRules):
 class SystemRules:
     TIEMPO_LIMITE_ESTRUCTURA = 50
     PUNTAGE_MINIMO_REINICIO = 1000
-    OBSERVACION_RELACIONES = 1
+    LIMITE_RELACIONAL=3
+    DISTANCIA_MAXIMA_RELACION=6
+    ESPERADO_EMERGENTE=7
+    FACTOR_RELACION=10
+    CRECIMIENTO_X=2
+    CRECIMIENTO_Y=2
+    NEURONAL_FACTOR=0.05
+    NEURONAS_CANTIDAD=10
+    TASA_APRENDIZAJE=0.5
+    FILAS=100
+    COLUMNAS=100
 
 
 class NodoInterface:

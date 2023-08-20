@@ -1,4 +1,4 @@
-from types_universo import NodoInterface, IPhysicsRules
+from types_universo import NodoInterface, SystemRules, IPhysicsRules
 from time_procedural import calcular_energia, intercambiar_cargas, relacionar_nodos
 import random
 from concurrent.futures import ThreadPoolExecutor, wait
@@ -23,8 +23,8 @@ def cargas(nodo: NodoInterface, valores_sistema: IPhysicsRules):
     nodo.memoria.energia = 1 - abs(nodo.memoria.cargas)
 
 def es_parte_de_grupo_circular(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecinos):
-    return (len(vecinos) >= valores_sistema.LIMITE_RELACIONAL and
-            len(nodo.memoria.relaciones) >= valores_sistema.LIMITE_RELACIONAL)  # Cambio aquí
+    return (len(vecinos) >= SystemRules.LIMITE_RELACIONAL and
+            len(nodo.memoria.relaciones) >= SystemRules.LIMITE_RELACIONAL)  # Cambio aquí
 
 def obtener_vecinos(nodos, valores_sistema: IPhysicsRules, i, j):
     FILAS = valores_sistema.FILAS

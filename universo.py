@@ -8,10 +8,10 @@ from typing import Dict, List
 class Universo:
     def __init__(self, valoresSistema: 'IPhysicsRules' = PhysicsRules()):
         self.nodos: List['NodoInterface'] = []
-        self.tiempo: int = 0
         self.valoresSistema = valoresSistema
         self.id = self.generarId()
         self.determinacionesDelSistema()
+        self.tiempo: int = 0
 
     def generarId(self) -> str:
         return (

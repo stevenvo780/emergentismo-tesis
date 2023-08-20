@@ -134,7 +134,7 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.memoria.energia > self.entrenador.universo.valoresSistema.ENERGIA and len(nodo.memoria.relaciones) > SystemRules.OBSERVACION_RELACIONES:
+            if nodo.memoria.energia > self.entrenador.universo.valoresSistema.ENERGIA and len(nodo.memoria.relaciones) > SystemRules.LIMITE_RELACIONAL:
                 color = (255, 255, 0)
             else:
                 if nodo.memoria.cargas > 0:

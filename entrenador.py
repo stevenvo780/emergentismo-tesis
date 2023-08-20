@@ -13,20 +13,21 @@ class Entrenador:
     def __init__(self):
         self.universo = Universo()
         self.tiempoLimiteSinEstructuras = SystemRules.TIEMPO_LIMITE_ESTRUCTURA
-        self.tasaDeAprendizaje = 0.05
+        self.tasaDeAprendizaje = SystemRules.TASA_APRENDIZAJE
         self.tiempoSinEstructuras = 0
         self.claves_parametros = [key for key in vars(
             self.universo.valoresSistema).keys()]
-        self.poblacion = [self.crear_red_neuronal() for _ in range(10)]
+        self.poblacion = [self.crear_red_neuronal() for _ in range(SystemRules.NEURONAS_CANTIDAD)]
 
     def crear_red_neuronal(self):
         model = Sequential()
-        model.add(Dense(12, input_dim=len(self.claves_parametros), activation='relu'))
+        model.add(Dense(12, input_dim=len(
+            self.claves_parametros), activation='relu'))
         model.add(Dense(8, activation='relu'))
-        model.add(Dense(len(self.claves_parametros), activation='sigmoid')) # Cambio a sigmoide
+        # Cambio a sigmoide
+        model.add(Dense(len(self.claves_parametros), activation='sigmoid'))
         model.compile(loss='mse', optimizer='adam')
         return model
-
 
     def fitness_function(self, neural_network):
         valores = self.universo.valoresSistema
@@ -50,7 +51,8 @@ class Entrenador:
 
     def mutate(self, neural_network):
         for i in range(len(neural_network.get_weights())):
-            neural_network.get_weights()[i] += np.random.normal(0, 0.005, neural_network.get_weights()[i].shape)
+            neural_network.get_weights(
+            )[i] += np.random.normal(0, SystemRules.NEURONAL_FACTOR, neural_network.get_weights()[i].shape)
 
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.entrenamientoPerpetuo)
@@ -84,7 +86,7 @@ class Entrenador:
                     continue
                 nodosRelacionados = [
                     rel.nodoId for rel in nodo.memoria.relaciones]
-                if len(nodosRelacionados) >= self.universo.valoresSistema.ESPERADO_EMERGENTE:
+                if len(nodosRelacionados) >= SystemRules.ESPERADO_EMERGENTE:
                     esEstructuraValida = all([
                         any(nodoRelacionado.id == idRelacionado and nodoRelacionado.memoria.energia > self.universo.valoresSistema.ENERGIA
                             for nodoRelacionado in nodos)
@@ -110,24 +112,12 @@ class Entrenador:
     def reiniciarUniverso(self, mejores_nuevos_valores):
         valoresSistema = PhysicsRules()
 
-        # Lista de claves que deben ser redondeadas a enteros, excluyendo 'FILAS' y 'COLUMNAS'
-        enteros = ['LIMITE_EDAD', 'CRECIMIENTO_X', 'CRECIMIENTO_Y', 'LIMITE_RELACIONAL',
-                   'DISTANCIA_MAXIMA_RELACION', 'ESPERADO_EMERGENTE', 'FACTOR_RELACION']
-
-        # Aplicar los nuevos valores, excepto para 'FILAS' y 'COLUMNAS'
         for i, clave in enumerate(self.claves_parametros):
             if clave not in [
                 'FILAS',
                 'COLUMNAS',
-                'CRECIMIENTO_X',
-                'CRECIMIENTO_Y',
-                'LIMITE_RELACIONAL',
-                'ESPERADO_EMERGENTE',
-            ]:  # No cambiar 'FILAS' y 'COLUMNAS'
+            ]:
                 valor = mejores_nuevos_valores[i]
-                if clave in enteros:
-                    # Redondear si la clave está en la lista de enteros
-                    valor = round(valor)
                 setattr(valoresSistema, clave, valor)
 
         self.universo = Universo(valoresSistema)
@@ -148,6 +138,7 @@ class Entrenador:
 
         pesos_temporales = (np.random.rand(
             len(self.claves_parametros)) - 0.5) * 0.1
+        print('pesos_temporales', pesos_temporales)
 
         # Verificar si total_recompensa es cero
         if total_recompensa != 0:
@@ -174,6 +165,8 @@ class Entrenador:
                 # Sumar o restar valores basándose en pesos temporales
                 mejores_nuevos_valores = [getattr(self.universo.valoresSistema, clave) + peso
                                           for clave, peso in zip(self.claves_parametros, pesos_temporales)]
+            else:
+                mejores_nuevos_valores = pesos_temporales
             self.aplicar_nuevos_valores(mejores_nuevos_valores)
             self.tiempoSinEstructuras = 0
             self.reiniciarUniverso(mejores_nuevos_valores)
