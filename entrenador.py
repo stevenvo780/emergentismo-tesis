@@ -8,14 +8,15 @@ from keras.models import Sequential
 from keras.layers import Dense
 import json
 
+
 class Entrenador:
     def __init__(self):
         self.puntaje_guardado = float('-inf')
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
-            self.universo.physicsRules).keys()] 
+            self.universo.physicsRules).keys()]
         self.cargar_mejor_universo()
-        self.cargar_mejor_puntaje() 
+        self.cargar_mejor_puntaje()
         self.intervaloEntrenamiento = systemRules.INTERVALO_ENTRENAMIENTO
         self.tasaDeAprendizaje = systemRules.TASA_APRENDIZAJE
         self.tiempoSinEstructuras = 0
@@ -29,14 +30,16 @@ class Entrenador:
                 rules = json.load(file)
                 for key, value in rules.items():
                     if key == "NUM_THREADS":
-                        value = value[0] if isinstance(value, list) else value  # Asegurándose de que sea un entero
+                        # Asegurándose de que sea un entero
+                        value = value[0] if isinstance(value, list) else value
                     setattr(systemRules, key, value)
         except (FileNotFoundError, json.JSONDecodeError):
             # Si el archivo no existe o no es válido, guardamos los valores iniciales de systemRules
             self.guardar_mejor_puntaje()
 
     def guardar_mejor_puntaje(self):
-        rules = {key: getattr(systemRules, key) for key in dir(systemRules) if not key.startswith('__')}
+        rules = {key: getattr(systemRules, key) for key in dir(
+            systemRules) if not key.startswith('__')}
         with open('system_rules.json', 'w') as file:
             json.dump(rules, file)
 
@@ -189,7 +192,7 @@ class Entrenador:
         # Si la recompensa total es cero, incrementar la mutación y reiniciar parte de la población
         if total_recompensa == 0:
             for nn in self.poblacion:
-                self.mutate(nn, increase_mutation=True)
+                self.mutate(nn, increase_mutation=True)  # Mutación más agresiva
 
             # Reiniciar una fracción de la población
             fraction_to_reset = 0.2
@@ -197,13 +200,18 @@ class Entrenador:
             for i in range(num_to_reset):
                 self.poblacion[i] = self.crear_red_neuronal()
 
+        # Si la recompensa total no alcanza el límite mínimo, aplicar una mutación más moderada
+        elif total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO:
+            for nn in self.poblacion:
+                self.mutate(nn, increase_mutation=False)  # Mutación más moderada
+
         # Conservar el mejor individuo (elitismo)
         best_nn = self.poblacion[np.argmax(recompensas)]
         self.guardar_red_neuronal(best_nn)
 
         if total_recompensa != 0:
             self.evolve_population(recompensas)
-        print(total_recompensa)
+        print('total_recompensa', total_recompensa)
         if mejores_nuevos_valores is not None:
             if mejor_recompensa > systemRules.MEJOR_PUNTAJE:
                 systemRules.MEJOR_PUNTAJE = total_recompensa
@@ -241,11 +249,16 @@ class Entrenador:
             shape = parent1.get_weights()[i].shape
             if np.prod(shape) <= 2:
                 continue
-            punto_cruce = random.randint(1, np.prod(shape) - 2)
-            weights1 = np.concatenate((parent1.get_weights()[i].flatten(
-            )[:punto_cruce], parent2.get_weights()[i].flatten()[punto_cruce:]))
-            weights2 = np.concatenate((parent2.get_weights()[i].flatten(
-            )[:punto_cruce], parent1.get_weights()[i].flatten()[punto_cruce:]))
+            punto_cruce1 = random.randint(1, np.prod(shape) - 3)
+            punto_cruce2 = random.randint(punto_cruce1 + 1, np.prod(shape) - 2)
+            weights1 = np.concatenate((parent1.get_weights()[i].flatten()[:punto_cruce1],
+                                       parent2.get_weights()[i].flatten()[
+                punto_cruce1:punto_cruce2],
+                parent1.get_weights()[i].flatten()[punto_cruce2:]))
+            weights2 = np.concatenate((parent2.get_weights()[i].flatten()[:punto_cruce1],
+                                       parent1.get_weights()[i].flatten()[
+                punto_cruce1:punto_cruce2],
+                parent2.get_weights()[i].flatten()[punto_cruce2:]))
             child1_weights = child1.get_weights()
             child1_weights[i] = weights1.reshape(shape)
             child2_weights = child2.get_weights()
@@ -253,4 +266,3 @@ class Entrenador:
             child1.set_weights(child1_weights)
             child2.set_weights(child2_weights)
         return child1, child2
-
