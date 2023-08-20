@@ -66,8 +66,10 @@ class SystemRules(ISystemRules):
                  PUNTAGE_MINIMO_REINICIO=20000,
                  LIMITE_RELACIONAL=3,
                  DISTANCIA_MAXIMA_RELACION=6,
-                 RECOMPENSA_EXTRA_CERRADA=1000,
+                 RECOMPENSA_EXTRA_CERRADA=10000,
                  RECOMPENSA_POR_RELACION=0.1,
+                 PENALIZACION_POR_RELACIONES=1000,
+                 UMBRAL_PROPORCION=0.1,
                  UMBRAL_CONJUNTOS_CERRADOS=1,
                  NEURONAL_FACTOR_INCREASE=0.05,
                  FACTOR_RELACION_LIMIT=10,
@@ -77,7 +79,7 @@ class SystemRules(ISystemRules):
                  NEURONAS_CANTIDAD=8,
                  TASA_APRENDIZAJE=0.5,
                  NUM_THREADS=12,
-                 MEJOR_PUNTAJE=0
+                 MEJOR_PUNTAJE=0,
                  ):
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
@@ -88,6 +90,7 @@ class SystemRules(ISystemRules):
         self.DISTANCIA_MAXIMA_RELACION = DISTANCIA_MAXIMA_RELACION
         self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
         self.RECOMPENSA_POR_RELACION = RECOMPENSA_POR_RELACION
+        self.PENALIZACION_POR_RELACIONES = PENALIZACION_POR_RELACIONES
         self.UMBRAL_CONJUNTOS_CERRADOS = UMBRAL_CONJUNTOS_CERRADOS
         self.NEURONAL_FACTOR_INCREASE = NEURONAL_FACTOR_INCREASE
         self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
@@ -98,6 +101,7 @@ class SystemRules(ISystemRules):
         self.TASA_APRENDIZAJE = TASA_APRENDIZAJE
         self.NUM_THREADS = NUM_THREADS
         self.MEJOR_PUNTAJE = MEJOR_PUNTAJE
+        self.UMBRAL_PROPORCION = UMBRAL_PROPORCION
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
