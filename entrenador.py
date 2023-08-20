@@ -1,8 +1,8 @@
 import numpy as np
 from universo import Universo
-from types_universo import PhysicsRules, systemRules
+from types_universo import PhysicsRules, systemRules, SystemRules
 import random
-from threading import Thread
+from threading import Thread,Lock
 from concurrent.futures import ThreadPoolExecutor, wait
 from keras.models import Sequential
 from keras.layers import Dense
@@ -13,6 +13,7 @@ class Entrenador:
         self.tiempoLimiteSinEstructuras = systemRules.TIEMPO_LIMITE_ESTRUCTURA
         self.tasaDeAprendizaje = systemRules.TASA_APRENDIZAJE
         self.tiempoSinEstructuras = 0
+        self.lock = Lock()
         self.claves_parametros = [key for key in vars(
             self.universo.physicsRules).keys()]
         self.poblacion = [self.crear_red_neuronal()
@@ -38,7 +39,7 @@ class Entrenador:
     def transformar_valores(self, nuevos_valores):
         for i, clave in enumerate(self.claves_parametros):
             if clave == 'FACTOR_RELACION':
-                nuevos_valores[i] = int(nuevos_valores[i]) + systemRules.MULTIPLICADOR_FILAS
+                nuevos_valores[i] = int(nuevos_valores[i] * systemRules.FACTOR_RELACION_LIMIT)
             else:
                 nuevos_valores[i] = max(0, nuevos_valores[i])
         return nuevos_valores
@@ -78,6 +79,8 @@ class Entrenador:
 
         def process_nodes(start_index, end_index):
             nonlocal numeroDeEstructuras, nodosVisitados
+            local_count = 0
+            local_visited = set()
             for i in range(start_index, end_index):
                 nodo = nodos[i]
                 if nodo.id in nodosVisitados:
@@ -92,8 +95,12 @@ class Entrenador:
                     ])
                     if esEstructuraValida or nodo.id in nodosRelacionados:
                         for idRelacionado in nodosRelacionados:
-                            nodosVisitados.add(idRelacionado)
-                        numeroDeEstructuras += 1
+                            local_visited.add(idRelacionado)
+                        local_count += 1
+
+            with self.lock:
+                numeroDeEstructuras += local_count
+                nodosVisitados.update(local_visited)
 
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(
@@ -112,6 +119,8 @@ class Entrenador:
         for i, clave in enumerate(self.claves_parametros):
             valor = mejores_nuevos_valores[i]
             setattr(physicsRules, clave, valor)
+        systemRules.FILAS = systemRules.GIRD_SIZE
+        systemRules.COLUMNAS = systemRules.GIRD_SIZE
         self.universo = Universo(physicsRules)
 
     def fitness_function(self, nuevos_valores):
@@ -133,6 +142,9 @@ class Entrenador:
         total_recompensa = sum(recompensas)
         print('total_recompensa', total_recompensa)
 
+        # Conservar el mejor individuo (elitismo)
+        best_nn = self.poblacion[np.argmax(recompensas)]
+
         if total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO and mejores_nuevos_valores is None:
             mejores_nuevos_valores = self.aplicar_pesos_temporales(mejores_nuevos_valores)
 
@@ -144,6 +156,8 @@ class Entrenador:
             self.aplicar_nuevos_valores(mejores_nuevos_valores)
             self.tiempoSinEstructuras = 0
             self.reiniciarUniverso(mejores_nuevos_valores)
+
+        self.poblacion[0] = best_nn
 
     def evolve_population(self, recompensas):
         total_recompensa = sum(recompensas)
@@ -169,11 +183,9 @@ class Entrenador:
             shape = parent1.get_weights()[i].shape
             if np.prod(shape) <= 2:
                 continue
-            punto_cruce = random.randint(1, np.prod(shape) - 1)
-            weights1 = np.concatenate((parent1.get_weights()[i].flatten(
-            )[:punto_cruce], parent2.get_weights()[i].flatten()[punto_cruce:]))
-            weights2 = np.concatenate((parent2.get_weights()[i].flatten(
-            )[:punto_cruce], parent1.get_weights()[i].flatten()[punto_cruce:]))
+            punto_cruce = random.randint(1, np.prod(shape) - 2)
+            weights1 = np.concatenate((parent1.get_weights()[i].flatten()[:punto_cruce], parent2.get_weights()[i].flatten()[punto_cruce:]))
+            weights2 = np.concatenate((parent2.get_weights()[i].flatten()[:punto_cruce], parent1.get_weights()[i].flatten()[punto_cruce:]))
             child1_weights = child1.get_weights()
             child1_weights[i] = weights1.reshape(shape)
             child2_weights = child2.get_weights()
@@ -184,6 +196,4 @@ class Entrenador:
 
     def aplicar_pesos_temporales(self, mejores_nuevos_valores):
         pesos_temporales = (np.random.rand(len(self.claves_parametros)) - 0.5) * 0.1
-        indice_factor_relacion = self.claves_parametros.index('FACTOR_RELACION')
-        pesos_temporales[indice_factor_relacion] = int(pesos_temporales[indice_factor_relacion] * 99) * systemRules.MULTIPLICADOR_FILAS
         return [getattr(self.universo.physicsRules, clave) + peso * getattr(self.universo.physicsRules, clave) for clave, peso in zip(self.claves_parametros, pesos_temporales)]

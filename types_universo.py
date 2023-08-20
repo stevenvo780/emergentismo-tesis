@@ -48,7 +48,7 @@ class ISystemRules:
     LIMITE_RELACIONAL = int
     DISTANCIA_MAXIMA_RELACION = int
     ESPERADO_EMERGENTE = int
-    MULTIPLICADOR_FILAS = int
+    FACTOR_RELACION_LIMIT = int
     CRECIMIENTO_X = int
     CRECIMIENTO_Y = int
     NEURONAL_FACTOR = float
@@ -59,6 +59,7 @@ class ISystemRules:
 
 class SystemRules(ISystemRules):
     def __init__(self,
+                 GIRD_SIZE=100,
                  FILAS=100,
                  COLUMNAS=100,
                  TIEMPO_LIMITE_ESTRUCTURA=50,
@@ -66,7 +67,7 @@ class SystemRules(ISystemRules):
                  LIMITE_RELACIONAL=3,
                  DISTANCIA_MAXIMA_RELACION=6,
                  ESPERADO_EMERGENTE=7,
-                 MULTIPLICADOR_FILAS=10,
+                 FACTOR_RELACION_LIMIT=10,
                  CRECIMIENTO_X=2,
                  CRECIMIENTO_Y=2,
                  NEURONAL_FACTOR=0.05,
@@ -74,6 +75,7 @@ class SystemRules(ISystemRules):
                  TASA_APRENDIZAJE=0.5,
                  NUM_THREADS=12
                  ):
+        self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
         self.COLUMNAS = COLUMNAS
         self.TIEMPO_LIMITE_ESTRUCTURA = TIEMPO_LIMITE_ESTRUCTURA
@@ -81,7 +83,7 @@ class SystemRules(ISystemRules):
         self.LIMITE_RELACIONAL = LIMITE_RELACIONAL
         self.DISTANCIA_MAXIMA_RELACION = DISTANCIA_MAXIMA_RELACION
         self.ESPERADO_EMERGENTE = ESPERADO_EMERGENTE
-        self.MULTIPLICADOR_FILAS = MULTIPLICADOR_FILAS
+        self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
         self.CRECIMIENTO_X = CRECIMIENTO_X
         self.CRECIMIENTO_Y = CRECIMIENTO_Y
         self.NEURONAL_FACTOR = NEURONAL_FACTOR

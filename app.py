@@ -4,11 +4,15 @@ from types_universo import systemRules
 
 pygame.init()
 
+
 class ConfigWindow:
     def __init__(self, entrenador, screen):
         self.entrenador = entrenador
         self.screen = screen
         self.font = pygame.font.Font(None, 24)
+
+    def update_screen(self, screen):
+        self.screen = screen
 
     def run(self):
         self.update_configurations()
@@ -64,8 +68,15 @@ class App:
         self.universe_screen = pygame.Surface(
             (universe_width, self.screenSize[1]))
         self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
-        self.config_window = ConfigWindow(
-            self.entrenador, self.config_screen)
+        self.config_window = ConfigWindow(self.entrenador, self.config_screen)
+        self.update_surface_dimensions()
+
+    def update_surface_dimensions(self):
+        universe_width = int(self.screenSize[0] * 0.8)
+        config_width = self.screenSize[0] - universe_width
+        self.universe_screen = pygame.Surface((universe_width, self.screenSize[1]))
+        self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
+        self.config_window.update_screen(self.config_screen)
 
     def run(self):
         running = True
@@ -99,8 +110,8 @@ class App:
                     self.view_offset[1] -= dy
                 elif event.type == pygame.VIDEORESIZE:
                     self.screenSize = event.size
-                    self.screen = pygame.display.set_mode(
-                        self.screenSize, pygame.RESIZABLE)
+                    self.screen = pygame.display.set_mode(self.screenSize, pygame.RESIZABLE)
+                    self.update_surface_dimensions()
 
             # Desplazamiento continuo con las flechas
             if self.keys_pressed[pygame.K_LEFT]:
