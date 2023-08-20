@@ -64,7 +64,7 @@ class SystemRules(ISystemRules):
                  COLUMNAS=100,
                  TIEMPO_LIMITE_ESTRUCTURA=50,
                  PUNTAGE_MINIMO_REINICIO=1000,
-                 LIMITE_RELACIONAL=3,
+                 LIMITE_RELACIONAL=1,
                  DISTANCIA_MAXIMA_RELACION=6,
                  RECOMPENSA_EXTRA_CERRADA=100,
                  RECOMPENSA_POR_RELACION=0.1,
