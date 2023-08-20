@@ -1,8 +1,7 @@
 from random import random
 from typing import List
-from types_universo import NodoInterface, IPhysicsRules, Memoria, Procesos, Relacion, SystemRules
+from types_universo import NodoInterface, IPhysicsRules, Memoria, Procesos, Relacion, systemRules
 from random import uniform
-
 
 def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
     return NodoInterface(
@@ -66,7 +65,7 @@ def relacionar_nodos(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecino
                 diferencia_cargas = abs(
                     nodo.memoria.cargas - vecino.memoria.cargas)
                 distancia = calcular_distancia(nodo, vecino)
-                if distancia > SystemRules.DISTANCIA_MAXIMA_RELACION:
+                if distancia > systemRules.DISTANCIA_MAXIMA_RELACION:
                     continue
 
                 probabilidad_relacion = (
@@ -97,23 +96,23 @@ def relacionar_nodos(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecino
 
 def expandir_espacio(nodos: List[NodoInterface], valores_sistema: IPhysicsRules) -> List[NodoInterface]:
     # Añadir filas en la parte inferior
-    for i in range(SystemRules.CRECIMIENTO_X):
-        for j in range(valores_sistema.COLUMNAS):
+    for i in range(systemRules.CRECIMIENTO_X):
+        for j in range(systemRules.COLUMNAS):
             cargas = uniform(-1, 1)
             energia = 1 - abs(cargas)
-            nodo = crear_nodo(valores_sistema.FILAS + i, j, cargas, energia)
+            nodo = crear_nodo(systemRules.FILAS + i, j, cargas, energia)
             nodos.append(nodo)
 
     # Añadir columnas a la derecha
-    for i in range(valores_sistema.FILAS + SystemRules.CRECIMIENTO_X):
-        for j in range(SystemRules.CRECIMIENTO_Y):
+    for i in range(systemRules.FILAS + systemRules.CRECIMIENTO_X):
+        for j in range(systemRules.CRECIMIENTO_Y):
             cargas = uniform(-1, 1)
             energia = 1 - abs(cargas)
-            nodo = crear_nodo(i, valores_sistema.COLUMNAS + j, cargas, energia)
+            nodo = crear_nodo(i, systemRules.COLUMNAS + j, cargas, energia)
             nodos.append(nodo)
 
     # Actualizar los valores del sistema
-    valores_sistema.FILAS += SystemRules.CRECIMIENTO_X
-    valores_sistema.COLUMNAS += SystemRules.CRECIMIENTO_Y
+    systemRules.FILAS += systemRules.CRECIMIENTO_X
+    systemRules.COLUMNAS += systemRules.CRECIMIENTO_Y
 
     return nodos

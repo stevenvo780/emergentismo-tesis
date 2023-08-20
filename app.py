@@ -1,6 +1,6 @@
 import pygame
 from entrenador import Entrenador
-from types_universo import SystemRules, PhysicsRules
+from types_universo import systemRules
 
 pygame.init()
 
@@ -16,25 +16,32 @@ class ConfigWindow:
     def refresh(self, entrenador):
         self.entrenador = entrenador
         self.screen.fill((255, 255, 255))  # Fondo blanco
-        system_values = vars(self.entrenador.universo.valoresSistema).items()
-        time_label = self.font.render(f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
-        time_structure_label = self.font.render(f"Tiempo sin estructura: {self.entrenador.tiempoSinEstructuras}", True, (0, 0, 0))
-        id_label = self.font.render(f"ID: {self.entrenador.universo.id}", True, (0, 0, 0))
+        physicsRules = vars(self.entrenador.universo.physicsRules).items()
+        system_rules = vars(systemRules).items()
+        time_label = self.font.render(
+            f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
+        time_structure_label = self.font.render(
+            f"Tiempo sin estructura: {self.entrenador.tiempoSinEstructuras}", True, (0, 0, 0))
+        id_label = self.font.render(
+            f"ID: {self.entrenador.universo.id}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
         self.screen.blit(time_structure_label, (10, 35))
         self.screen.blit(id_label, (10, 55))
 
-        for i, (attribute, value) in enumerate(system_values):
+        for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, 80 + i * 15))
+            self.screen.blit(label, (10, 80 + i * 20))
+
+        for i, (attribute, value) in enumerate(physicsRules):
+            label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
+            self.screen.blit(label, (10, (380 + i * 20)))
 
     def update_configurations(self):
-        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.valoresSistema).items()):
+        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physicsRules).items()):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(
                 label, (self.screen.get_width() // 2 + 10, 10 + i * 20))
-
 
 
 class App:
@@ -134,7 +141,7 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.memoria.energia > self.entrenador.universo.valoresSistema.ENERGIA and len(nodo.memoria.relaciones) > SystemRules.LIMITE_RELACIONAL:
+            if nodo.memoria.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.memoria.relaciones) > systemRules.LIMITE_RELACIONAL:
                 color = (255, 255, 0)
             else:
                 if nodo.memoria.cargas > 0:
