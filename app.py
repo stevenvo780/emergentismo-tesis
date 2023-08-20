@@ -39,7 +39,7 @@ class ConfigWindow:
 
         for i, (attribute, value) in enumerate(physicsRules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, (380 + i * 20)))
+            self.screen.blit(label, (10, (440 + i * 20)))
 
     def update_configurations(self):
         for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physicsRules).items()):

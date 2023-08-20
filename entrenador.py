@@ -73,46 +73,33 @@ class Entrenador:
         self.tasaDeAprendizaje = tasaDeAprendizaje
 
     def calcularRecompensa(self, nodos):
-        numeroDeEstructuras = 0
-        nodosVisitados = set()
+        numeroDeRelaciones = 0
+        numeroDeEstructurasCerradas = 0
         step = len(nodos) // systemRules.NUM_THREADS
 
         def process_nodes(start_index, end_index):
-            nonlocal numeroDeEstructuras, nodosVisitados
+            nonlocal numeroDeRelaciones, numeroDeEstructurasCerradas
             local_count = 0
-            local_visited = set()
+            local_closed_count = 0
             for i in range(start_index, end_index):
                 nodo = nodos[i]
-                if nodo.id in nodosVisitados:
-                    continue
-                nodosRelacionados = [
-                    rel.nodoId for rel in nodo.memoria.relaciones]
-                if len(nodosRelacionados) >= systemRules.ESPERADO_EMERGENTE:
-                    esEstructuraValida = all([
-                        any(nodoRelacionado.id == idRelacionado and nodoRelacionado.memoria.energia > self.universo.physicsRules.ENERGIA
-                            for nodoRelacionado in nodos)
-                        for idRelacionado in nodosRelacionados
-                    ])
-                    if esEstructuraValida or nodo.id in nodosRelacionados:
-                        for idRelacionado in nodosRelacionados:
-                            local_visited.add(idRelacionado)
-                        local_count += 1
+                nodosRelacionados = [rel.nodoId for rel in nodo.memoria.relaciones]
+                local_count += len(nodosRelacionados)  # Contamos todas las relaciones
+                if i in nodosRelacionados:  # Verificamos si el nodo tiene una relación consigo mismo, lo que indica una estructura cerrada
+                    local_closed_count += 1
 
             with self.lock:
-                numeroDeEstructuras += local_count
-                nodosVisitados.update(local_visited)
+                numeroDeRelaciones += local_count
+                numeroDeEstructurasCerradas += local_closed_count
 
         with ThreadPoolExecutor() as executor:
             futures = [executor.submit(
-                process_nodes, i * step, (i + 1) * step if i != 3 else len(nodos)) for i in range(4)]
+                process_nodes, i * step, (i + 1) * step if i != systemRules.NUM_THREADS - 1 else len(nodos)) for i in range(systemRules.NUM_THREADS)]
             wait(futures)
 
-        if numeroDeEstructuras == 0:
-            self.tiempoSinEstructuras += 1
-        else:
-            self.tiempoSinEstructuras = 0
+        recompensa = (numeroDeRelaciones * systemRules.RECOMPENSA_POR_RELACION) + (numeroDeEstructurasCerradas * systemRules.RECOMPENSA_EXTRA_CERRADA)
+        return recompensa
 
-        return numeroDeEstructuras
 
     def reiniciarUniverso(self, mejores_nuevos_valores):
         physicsRules = PhysicsRules()
