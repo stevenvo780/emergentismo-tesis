@@ -12,6 +12,7 @@ class IPhysicsRules:
     PROBABILIDAD_TRANSICION: float
     FLUCTUACION_MAXIMA: float
     PROBABILIDAD_TUNEL: float
+    FACTOR_RELACION: int
 
 
 class PhysicsRules(IPhysicsRules):
@@ -25,6 +26,7 @@ class PhysicsRules(IPhysicsRules):
                  FLUCTUACION_MAXIMA=0.01,
                  PROBABILIDAD_TUNEL=0.01,
                  FACTOR_ESTABILIDAD=0.2,
+                 FACTOR_RELACION=10
                  ):
         self.FILAS = FILAS
         self.COLUMNAS = COLUMNAS
@@ -35,6 +37,7 @@ class PhysicsRules(IPhysicsRules):
         self.PROBABILIDAD_TRANSICION = PROBABILIDAD_TRANSICION
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
         self.PROBABILIDAD_TUNEL = PROBABILIDAD_TUNEL
+        self.FACTOR_RELACION = FACTOR_RELACION
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
@@ -47,11 +50,11 @@ class SystemRules:
     LIMITE_RELACIONAL=3
     DISTANCIA_MAXIMA_RELACION=6
     ESPERADO_EMERGENTE=7
-    FACTOR_RELACION=10
+    MULTIPLICADOR_FILAS=10
     CRECIMIENTO_X=2
     CRECIMIENTO_Y=2
     NEURONAL_FACTOR=0.05
-    NEURONAS_CANTIDAD=10
+    NEURONAS_CANTIDAD=8
     TASA_APRENDIZAJE=0.5
     FILAS=100
     COLUMNAS=100

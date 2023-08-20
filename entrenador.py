@@ -6,8 +6,12 @@ from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, wait
 from keras.models import Sequential
 from keras.layers import Dense
+from keras.layers import Activation
 import tensorflow as tf
+from keras import backend as K
 
+def custom_activation(x):
+    return K.clip(x * 100, 1, 100)
 
 class Entrenador:
     def __init__(self):
@@ -33,17 +37,23 @@ class Entrenador:
         valores = self.universo.valoresSistema
         input_data = np.array([getattr(valores, key)
                                for key in self.claves_parametros])
-        nuevos_valores = neural_network.predict(
-            input_data.reshape(1, -1)).flatten()
         return self.calcularRecompensa(self.universo.nodos)
 
     def calcular_nuevos_valores(self, neural_network):
         valores = self.universo.valoresSistema
-        input_data = np.array([getattr(valores, key)
-                               for key in self.claves_parametros])
-        nuevos_valores = neural_network.predict(
-            input_data.reshape(1, -1)).flatten()
+        input_data = np.array([getattr(valores, key) for key in self.claves_parametros])
+        nuevos_valores = neural_network.predict(input_data.reshape(1, -1)).flatten()
+        print(nuevos_valores);
+        # Identifica y aplica las transformaciones necesarias para cada valor
+        for i, clave in enumerate(self.claves_parametros):
+            if clave in ['FACTOR_RELACION']:  # Ajusta según tus claves enteras
+                nuevos_valores[i] = int(nuevos_valores[i]) + SystemRules.MULTIPLICADOR_FILAS
+            else:
+                # Los valores flotantes estarán en el rango [0, 1] debido a la función de activación ReLU
+                nuevos_valores[i] = max(0, nuevos_valores[i])
+
         return nuevos_valores
+
 
     def aplicar_nuevos_valores(self, nuevos_valores):
         for i, clave in enumerate(self.claves_parametros):
@@ -136,11 +146,15 @@ class Entrenador:
         total_recompensa = sum(recompensas)
         print('total_recompensa', total_recompensa)
 
-        pesos_temporales = (np.random.rand(
-            len(self.claves_parametros)) - 0.5) * 0.1
-        print('pesos_temporales', pesos_temporales)
+        # Aplicar pesos aleatorios como carga si total_recompensa es bajo
+        if total_recompensa < SystemRules.PUNTAGE_MINIMO_REINICIO and mejores_nuevos_valores is None:
+            pesos_temporales = (np.random.rand(len(self.claves_parametros)) - 0.5) * 0.1
+            indice_factor_relacion = self.claves_parametros.index('FACTOR_RELACION')
+            pesos_temporales[indice_factor_relacion] = int(pesos_temporales[indice_factor_relacion] * 99) + 1 * SystemRules.MULTIPLICADOR_FILAS
+            print('pesos_temporales', pesos_temporales)
+            mejores_nuevos_valores = [getattr(self.universo.valoresSistema, clave) + peso * getattr(self.universo.valoresSistema, clave)
+                                    for clave, peso in zip(self.claves_parametros, pesos_temporales)]
 
-        # Verificar si total_recompensa es cero
         if total_recompensa != 0:
             probabilidades_seleccion = [
                 rec / total_recompensa for rec in recompensas]
@@ -159,14 +173,9 @@ class Entrenador:
                     self.mutate(nn)
 
             self.poblacion = nueva_poblacion
+
         print(mejores_nuevos_valores)
         if self.tiempoSinEstructuras > self.tiempoLimiteSinEstructuras or total_recompensa < SystemRules.PUNTAGE_MINIMO_REINICIO:
-            if mejores_nuevos_valores is None:
-                # Sumar o restar valores basándose en pesos temporales
-                mejores_nuevos_valores = [getattr(self.universo.valoresSistema, clave) + peso
-                                          for clave, peso in zip(self.claves_parametros, pesos_temporales)]
-            else:
-                mejores_nuevos_valores = pesos_temporales
             self.aplicar_nuevos_valores(mejores_nuevos_valores)
             self.tiempoSinEstructuras = 0
             self.reiniciarUniverso(mejores_nuevos_valores)

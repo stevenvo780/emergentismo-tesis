@@ -72,7 +72,7 @@ def relacionar_nodos(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecino
                 probabilidad_relacion = (
                     (diferencia_cargas / 2) *
                     (1 / distancia) *
-                    SystemRules.FACTOR_RELACION
+                    valores_sistema.FACTOR_RELACION
                 )
 
                 if (random() < probabilidad_relacion and
