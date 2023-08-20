@@ -5,30 +5,32 @@ from types_universo import SystemRules, PhysicsRules
 pygame.init()
 
 class ConfigWindow:
-    def __init__(self, universo, screen):
-        self.universo = universo
+    def __init__(self, entrenador, screen):
+        self.entrenador = entrenador
         self.screen = screen
         self.font = pygame.font.Font(None, 24)
 
     def run(self):
         self.update_configurations()
 
-    def refresh(self, universo):
-        self.universo = universo
+    def refresh(self, entrenador):
+        self.entrenador = entrenador
         self.screen.fill((255, 255, 255))  # Fondo blanco
-        system_values = vars(self.universo.valoresSistema).items()
-        time_label = self.font.render(f"Tiempo: {self.universo.tiempo}", True, (0, 0, 0))
-        id_label = self.font.render(f"ID: {self.universo.id}", True, (0, 0, 0))
+        system_values = vars(self.entrenador.universo.valoresSistema).items()
+        time_label = self.font.render(f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
+        time_structure_label = self.font.render(f"Tiempo sin estructura: {self.entrenador.tiempoSinEstructuras}", True, (0, 0, 0))
+        id_label = self.font.render(f"ID: {self.entrenador.universo.id}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
-        self.screen.blit(id_label, (10, 35))
+        self.screen.blit(time_structure_label, (10, 35))
+        self.screen.blit(id_label, (10, 55))
 
         for i, (attribute, value) in enumerate(system_values):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, 60 + i * 15))
+            self.screen.blit(label, (10, 80 + i * 15))
 
     def update_configurations(self):
-        for i, (attribute, value) in enumerate(vars(self.universo.valoresSistema).items()):
+        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.valoresSistema).items()):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(
                 label, (self.screen.get_width() // 2 + 10, 10 + i * 20))
@@ -42,7 +44,7 @@ class App:
         self.gridSize = int(len(self.entrenador.universo.nodos) ** 0.5)
         self.cellSize = 10
         self.view_offset = [0, 0]
-        self.screenSize = [1500, 720]
+        self.screenSize = [1600, 820]
         self.screen = pygame.display.set_mode(
             self.screenSize, pygame.RESIZABLE)
         pygame.display.set_caption("Simulador del Universo")
@@ -56,7 +58,7 @@ class App:
             (universe_width, self.screenSize[1]))
         self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
         self.config_window = ConfigWindow(
-            self.entrenador.universo, self.config_screen)
+            self.entrenador, self.config_screen)
 
     def run(self):
         running = True
@@ -104,7 +106,7 @@ class App:
                 self.view_offset[1] += self.cellSize
 
             self.update_grid()
-            self.config_window.refresh(self.entrenador.universo)
+            self.config_window.refresh(self.entrenador)
             self.screen.blit(self.universe_screen, (0, 0))
             self.screen.blit(self.config_screen,
                              (self.universe_screen.get_width(), 0))

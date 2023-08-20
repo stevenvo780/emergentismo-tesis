@@ -1,6 +1,5 @@
 from typing import List, Callable
 
-
 class IPhysicsRules:
     FILAS: int
     COLUMNAS: int
@@ -30,11 +29,11 @@ class PhysicsRules(IPhysicsRules):
                  REDUCCION_CARGA=0.01,
                  CRECIMIENTO_X=2,
                  CRECIMIENTO_Y=2,
-                 UMBRAL_CARGA=0.0001,
+                 UMBRAL_CARGA=0.1,
                  FACTOR_ESTABILIDAD=0.2,
                  LIMITE_RELACIONAL=3,
                  DISTANCIA_MAXIMA_RELACION=6,
-                 ESPERADO_EMERGENTE=7,
+                 ESPERADO_EMERGENTE=3,
                  FACTOR_RELACION=10,
                  ENERGIA=0.01,
                  PROBABILIDAD_TRANSICION=0.01,
@@ -64,7 +63,8 @@ class PhysicsRules(IPhysicsRules):
 
 
 class SystemRules:
-    TIEMPO_LIMITE_ESTRUCTURA = 20
+    TIEMPO_LIMITE_ESTRUCTURA = 50
+    PUNTAGE_MINIMO_REINICIO = 1000
     OBSERVACION_RELACIONES = 1
 
 

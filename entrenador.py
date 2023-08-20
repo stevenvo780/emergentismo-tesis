@@ -6,6 +6,7 @@ from threading import Thread
 from concurrent.futures import ThreadPoolExecutor, wait
 from keras.models import Sequential
 from keras.layers import Dense
+import tensorflow as tf
 
 
 class Entrenador:
@@ -14,10 +15,9 @@ class Entrenador:
         self.tiempoLimiteSinEstructuras = SystemRules.TIEMPO_LIMITE_ESTRUCTURA
         self.tasaDeAprendizaje = 0.05
         self.tiempoSinEstructuras = 0
-        self.claves_parametros = [key for key in dir(
-            PhysicsRules) if not key.startswith("__")]
-        self.poblacion = [self.crear_red_neuronal()
-                          for _ in range(10)]
+        self.claves_parametros = [key for key in vars(
+            self.universo.valoresSistema).keys()]
+        self.poblacion = [self.crear_red_neuronal() for _ in range(10)]
 
     def crear_red_neuronal(self):
         model = Sequential()
@@ -91,7 +91,7 @@ class Entrenador:
                             for nodoRelacionado in nodos)
                         for idRelacionado in nodosRelacionados
                     ])
-                    if esEstructuraValida:
+                    if esEstructuraValida or nodo.id in nodosRelacionados:  # Verificar relaciones consigo mismo
                         for idRelacionado in nodosRelacionados:
                             nodosVisitados.add(idRelacionado)
                         numeroDeEstructuras += 1
@@ -108,8 +108,29 @@ class Entrenador:
 
         return numeroDeEstructuras
 
-    def reiniciarUniverso(self):
+    def reiniciarUniverso(self, mejores_nuevos_valores):
         valoresSistema = PhysicsRules()
+
+        # Lista de claves que deben ser redondeadas a enteros, excluyendo 'FILAS' y 'COLUMNAS'
+        enteros = ['LIMITE_EDAD', 'CRECIMIENTO_X', 'CRECIMIENTO_Y', 'LIMITE_RELACIONAL',
+                   'DISTANCIA_MAXIMA_RELACION', 'ESPERADO_EMERGENTE', 'FACTOR_RELACION']
+
+        # Aplicar los nuevos valores, excepto para 'FILAS' y 'COLUMNAS'
+        for i, clave in enumerate(self.claves_parametros):
+            if clave not in [
+                'FILAS',
+                'COLUMNAS',
+                'CRECIMIENTO_X',
+                'CRECIMIENTO_Y',
+                'LIMITE_RELACIONAL',
+                'ESPERADO_EMERGENTE',
+            ]:  # No cambiar 'FILAS' y 'COLUMNAS'
+                valor = mejores_nuevos_valores[i]
+                if clave in enteros:
+                    # Redondear si la clave está en la lista de enteros
+                    valor = round(valor)
+                setattr(valoresSistema, clave, valor)
+
         self.universo = Universo(valoresSistema)
 
     def entrenarPerpetuo(self):
@@ -118,24 +139,23 @@ class Entrenador:
         recompensas = []
         for nn in self.poblacion:
             nuevos_valores = self.calcular_nuevos_valores(nn)
-            recompensa = self.fitness_function(
-                nn)  # Usar fitness_function aquí
+            recompensa = self.fitness_function(nn)
             recompensas.append(recompensa)
             if recompensa > mejor_recompensa:
                 mejor_recompensa = recompensa
                 mejores_nuevos_valores = nuevos_valores
         total_recompensa = sum(recompensas)
+        print('total_recompensa', total_recompensa)
+
+        pesos_temporales = (np.random.rand(
+            len(self.claves_parametros)) - 0.5) * 0.1
 
         # Verificar si total_recompensa es cero
         if total_recompensa != 0:
             probabilidades_seleccion = [
                 rec / total_recompensa for rec in recompensas]
-
-            # Selección
             seleccionados = np.random.choice(self.poblacion, size=len(
                 self.poblacion), p=probabilidades_seleccion)
-
-            # Cruce
             nueva_poblacion = []
             for i in range(0, len(seleccionados), 2):
                 parent1 = seleccionados[i]
@@ -149,18 +169,15 @@ class Entrenador:
                     self.mutate(nn)
 
             self.poblacion = nueva_poblacion
-        print(self.tiempoSinEstructuras)
-        print(self.tiempoLimiteSinEstructuras)
         print(mejores_nuevos_valores)
-        if (self.tiempoSinEstructuras > self.tiempoLimiteSinEstructuras):
+        if self.tiempoSinEstructuras > self.tiempoLimiteSinEstructuras or total_recompensa < SystemRules.PUNTAGE_MINIMO_REINICIO:
             if mejores_nuevos_valores is None:
-                mejores_nuevos_valores = np.random.rand(
-                    len(self.claves_parametros))
-                self.aplicar_nuevos_valores(mejores_nuevos_valores)
-                self.tiempoSinEstructuras = 0
-                mejores_nuevos_valores = None
-                mejor_recompensa = float('-inf')
-            self.reiniciarUniverso()
+                # Sumar o restar valores basándose en pesos temporales
+                mejores_nuevos_valores = [getattr(self.universo.valoresSistema, clave) + peso
+                                          for clave, peso in zip(self.claves_parametros, pesos_temporales)]
+            self.aplicar_nuevos_valores(mejores_nuevos_valores)
+            self.tiempoSinEstructuras = 0
+            self.reiniciarUniverso(mejores_nuevos_valores)
 
     def crossover(self, parent1, parent2):
         # Cruce más detallado para los pesos y sesgos de las redes neuronales
@@ -178,4 +195,3 @@ class Entrenador:
             child1.get_weights()[i] = weights1.reshape(shape)
             child2.get_weights()[i] = weights2.reshape(shape)
         return child1, child2
-
