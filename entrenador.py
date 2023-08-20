@@ -17,7 +17,7 @@ class Entrenador:
         self.claves_parametros = [key for key in dir(
             PhysicsRules) if not key.startswith("__")]
         self.poblacion = [self.crear_red_neuronal()
-                          for _ in range(5)]  # Población de 10 individuos
+                          for _ in range(10)]
 
     def crear_red_neuronal(self):
         model = Sequential()
@@ -101,13 +101,16 @@ class Entrenador:
                 process_nodes, i * step, (i + 1) * step if i != 3 else len(nodos)) for i in range(4)]
             wait(futures)
 
+        if numeroDeEstructuras == 0:
+            self.tiempoSinEstructuras += 1
+        else:
+            self.tiempoSinEstructuras = 0
+
         return numeroDeEstructuras
 
     def reiniciarUniverso(self):
         valoresSistema = PhysicsRules()
         self.universo = Universo(valoresSistema)
-        self.universo.valoresSistema.COLUMNAS = PhysicsRules.COLUMNAS
-        self.universo.valoresSistema.FILAS = PhysicsRules.FILAS
 
     def entrenarPerpetuo(self):
         mejores_nuevos_valores = None
@@ -126,7 +129,7 @@ class Entrenador:
         # Verificar si total_recompensa es cero
         if total_recompensa != 0:
             probabilidades_seleccion = [
-            rec / total_recompensa for rec in recompensas]
+                rec / total_recompensa for rec in recompensas]
 
             # Selección
             seleccionados = np.random.choice(self.poblacion, size=len(
@@ -146,27 +149,33 @@ class Entrenador:
                     self.mutate(nn)
 
             self.poblacion = nueva_poblacion
-
-        if self.tiempoSinEstructuras >= self.tiempoLimiteSinEstructuras:
-            if mejores_nuevos_valores is not None:
+        print(self.tiempoSinEstructuras)
+        print(self.tiempoLimiteSinEstructuras)
+        print(mejores_nuevos_valores)
+        if (self.tiempoSinEstructuras > self.tiempoLimiteSinEstructuras):
+            if mejores_nuevos_valores is None:
+                mejores_nuevos_valores = np.random.rand(
+                    len(self.claves_parametros))
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
+                self.tiempoSinEstructuras = 0
+                mejores_nuevos_valores = None
+                mejor_recompensa = float('-inf')
             self.reiniciarUniverso()
-            self.tiempoSinEstructuras = 0
-            mejores_nuevos_valores = None
-            mejor_recompensa = float('-inf')
 
     def crossover(self, parent1, parent2):
-        # Cruce de un solo punto
+        # Cruce más detallado para los pesos y sesgos de las redes neuronales
         child1 = self.crear_red_neuronal()
         child2 = self.crear_red_neuronal()
-        punto_cruce = random.randint(1, len(self.claves_parametros) - 1)
-
         for i in range(len(parent1.get_weights())):
+            shape = parent1.get_weights()[i].shape
+            if np.prod(shape) <= 2:
+                continue  # Saltar a la siguiente iteración si el producto es <= 2
+            punto_cruce = random.randint(1, np.prod(shape) - 1)
             weights1 = np.concatenate(
-                (parent1.get_weights()[i][:punto_cruce], parent2.get_weights()[i][punto_cruce:]))
+                (parent1.get_weights()[i].flatten()[:punto_cruce], parent2.get_weights()[i].flatten()[punto_cruce:]))
             weights2 = np.concatenate(
-                (parent2.get_weights()[i][:punto_cruce], parent1.get_weights()[i][punto_cruce:]))
-            child1.get_weights()[i] = weights1
-            child2.get_weights()[i] = weights2
-
+                (parent2.get_weights()[i].flatten()[:punto_cruce], parent1.get_weights()[i].flatten()[punto_cruce:]))
+            child1.get_weights()[i] = weights1.reshape(shape)
+            child2.get_weights()[i] = weights2.reshape(shape)
         return child1, child2
+
