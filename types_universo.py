@@ -54,6 +54,7 @@ class ISystemRules:
     NEURONAS_CANTIDAD = float
     TASA_APRENDIZAJE = float
     NUM_THREADS = int
+    MEJOR_PUNTAJE = int
 
 
 class SystemRules(ISystemRules):
@@ -75,7 +76,8 @@ class SystemRules(ISystemRules):
                  NEURONAL_FACTOR=0.05,
                  NEURONAS_CANTIDAD=8,
                  TASA_APRENDIZAJE=0.5,
-                 NUM_THREADS=12
+                 NUM_THREADS=12,
+                 MEJOR_PUNTAJE=0
                  ):
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
@@ -95,6 +97,7 @@ class SystemRules(ISystemRules):
         self.NEURONAS_CANTIDAD = NEURONAS_CANTIDAD
         self.TASA_APRENDIZAJE = TASA_APRENDIZAJE
         self.NUM_THREADS = NUM_THREADS
+        self.MEJOR_PUNTAJE = MEJOR_PUNTAJE
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]

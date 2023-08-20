@@ -13,14 +13,32 @@ class Entrenador:
         self.puntaje_guardado = float('-inf')
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
-            self.universo.physicsRules).keys()]  # Mover esta línea antes de la llamada a cargar_mejor_universo
+            self.universo.physicsRules).keys()] 
         self.cargar_mejor_universo()
+        self.cargar_mejor_puntaje() 
         self.intervaloEntrenamiento = systemRules.INTERVALO_ENTRENAMIENTO
         self.tasaDeAprendizaje = systemRules.TASA_APRENDIZAJE
         self.tiempoSinEstructuras = 0
         self.lock = Lock()
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal()
                           for i in range(systemRules.NEURONAS_CANTIDAD)]
+
+    def cargar_mejor_puntaje(self):
+        try:
+            with open('system_rules.json', 'r') as file:
+                rules = json.load(file)
+                for key, value in rules.items():
+                    if key == "NUM_THREADS":
+                        value = value[0] if isinstance(value, list) else value  # Asegurándose de que sea un entero
+                    setattr(systemRules, key, value)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # Si el archivo no existe o no es válido, guardamos los valores iniciales de systemRules
+            self.guardar_mejor_puntaje()
+
+    def guardar_mejor_puntaje(self):
+        rules = {key: getattr(systemRules, key) for key in dir(systemRules) if not key.startswith('__')}
+        with open('system_rules.json', 'w') as file:
+            json.dump(rules, file)
 
     def cargar_red_neuronal(self):
         model = self.crear_red_neuronal()  # Crear la estructura de la red
@@ -187,8 +205,10 @@ class Entrenador:
             self.evolve_population(recompensas)
         print(total_recompensa)
         if mejores_nuevos_valores is not None:
-            if mejor_recompensa > self.puntaje_guardado:
+            if mejor_recompensa > systemRules.MEJOR_PUNTAJE:
+                systemRules.MEJOR_PUNTAJE = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
+                self.guardar_mejor_puntaje()
             if total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)
