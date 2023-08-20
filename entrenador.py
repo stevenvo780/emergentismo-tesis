@@ -8,14 +8,14 @@ from keras.models import Sequential
 from keras.layers import Dense
 import json
 
-
 class Entrenador:
     def __init__(self):
+        self.puntaje_guardado = float('-inf')
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
             self.universo.physicsRules).keys()]  # Mover esta línea antes de la llamada a cargar_mejor_universo
         self.cargar_mejor_universo()
-        self.tiempoLimiteSinEstructuras = systemRules.TIEMPO_LIMITE_ESTRUCTURA
+        self.intervaloEntrenamiento = systemRules.INTERVALO_ENTRENAMIENTO
         self.tasaDeAprendizaje = systemRules.TASA_APRENDIZAJE
         self.tiempoSinEstructuras = 0
         self.lock = Lock()
@@ -80,14 +80,14 @@ class Entrenador:
         for i, clave in enumerate(self.claves_parametros):
             setattr(self.universo.physicsRules, clave, nuevos_valores[i])
 
-    def mutate(self, neural_network):
+    def mutate(self, neural_network, increase_mutation=False):
+        factor = systemRules.NEURONAL_FACTOR_INCREASE if increase_mutation else systemRules.NEURONAL_FACTOR
         weights = neural_network.get_weights()
         for i in range(len(weights)):
-            weights[i] += np.random.normal(0,
-                                           systemRules.NEURONAL_FACTOR, weights[i].shape)
+            weights[i] += np.random.normal(0, factor, weights[i].shape)
             if np.random.rand() < 0.05:
-                weights[i] += np.random.normal(
-                    0, systemRules.NEURONAL_FACTOR, weights[i].shape) * 0.5
+                weights[i] += np.random.normal(0,
+                                               factor, weights[i].shape) * 0.5
         neural_network.set_weights(weights)
 
     def iniciarEntrenamiento(self):
@@ -101,11 +101,11 @@ class Entrenador:
     def nextStepRecursivo(self):
         self.universo.next()
         self.universo.tiempo += 1
-        if self.universo.tiempo % self.tiempoLimiteSinEstructuras == 0:
+        if self.universo.tiempo % self.intervaloEntrenamiento == 0:
             self.entrenar()
 
-    def actualizarConfiguracion(self, tiempoLimiteSinEstructuras, tasaDeAprendizaje):
-        self.tiempoLimiteSinEstructuras = tiempoLimiteSinEstructuras
+    def actualizarConfiguracion(self, intervaloEntrenamiento, tasaDeAprendizaje):
+        self.intervaloEntrenamiento = intervaloEntrenamiento
         self.tasaDeAprendizaje = tasaDeAprendizaje
 
     def calcularRecompensa(self, nodos):
@@ -125,7 +125,6 @@ class Entrenador:
                 local_count += len(nodosRelacionados)
                 if i in nodosRelacionados:  # Verificamos si el nodo tiene una relación consigo mismo, lo que indica una estructura cerrada
                     local_closed_count += 1
-
             with self.lock:
                 numeroDeRelaciones += local_count
                 numeroDeEstructurasCerradas += local_closed_count
@@ -135,7 +134,10 @@ class Entrenador:
                 process_nodes, i * step, (i + 1) * step if i != systemRules.NUM_THREADS - 1 else len(nodos)) for i in range(systemRules.NUM_THREADS)]
             wait(futures)
 
-        recompensa = (numeroDeRelaciones * systemRules.RECOMPENSA_POR_RELACION) + \
+        recompensa_por_relaciones = numeroDeRelaciones * \
+            systemRules.RECOMPENSA_POR_RELACION
+
+        recompensa = recompensa_por_relaciones + \
             (numeroDeEstructurasCerradas * systemRules.RECOMPENSA_EXTRA_CERRADA)
         return recompensa
 
@@ -165,26 +167,34 @@ class Entrenador:
                 mejores_nuevos_valores = nuevos_valores
 
         total_recompensa = sum(recompensas)
-        print('total_recompensa', total_recompensa)
+
+        # Si la recompensa total es cero, incrementar la mutación y reiniciar parte de la población
+        if total_recompensa == 0:
+            for nn in self.poblacion:
+                self.mutate(nn, increase_mutation=True)
+
+            # Reiniciar una fracción de la población
+            fraction_to_reset = 0.2
+            num_to_reset = int(len(self.poblacion) * fraction_to_reset)
+            for i in range(num_to_reset):
+                self.poblacion[i] = self.crear_red_neuronal()
 
         # Conservar el mejor individuo (elitismo)
         best_nn = self.poblacion[np.argmax(recompensas)]
         self.guardar_red_neuronal(best_nn)
 
-        if total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO and mejores_nuevos_valores is None:
-            mejores_nuevos_valores = self.aplicar_pesos_temporales(
-                mejores_nuevos_valores)
-
         if total_recompensa != 0:
             self.evolve_population(recompensas)
+        print(total_recompensa)
+        if mejores_nuevos_valores is not None:
+            if mejor_recompensa > self.puntaje_guardado:
+                self.guardar_mejor_universo(mejores_nuevos_valores)
+            if total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO:
+                self.aplicar_nuevos_valores(mejores_nuevos_valores)
+                self.reiniciarUniverso(mejores_nuevos_valores)
+                self.puntaje_guardado = mejor_recompensa
 
         print(mejores_nuevos_valores)
-        if mejores_nuevos_valores is not None:
-            self.guardar_mejor_universo(mejores_nuevos_valores)
-            self.aplicar_nuevos_valores(mejores_nuevos_valores)
-            self.tiempoSinEstructuras = 0
-            self.reiniciarUniverso(mejores_nuevos_valores)
-
         self.poblacion[0] = best_nn
 
     def evolve_population(self, recompensas):
@@ -224,7 +234,3 @@ class Entrenador:
             child2.set_weights(child2_weights)
         return child1, child2
 
-    def aplicar_pesos_temporales(self, mejores_nuevos_valores):
-        pesos_temporales = (np.random.rand(
-            len(self.claves_parametros)) - 0.5) * 0.1
-        return [getattr(self.universo.physicsRules, clave) + peso * getattr(self.universo.physicsRules, clave) for clave, peso in zip(self.claves_parametros, pesos_temporales)]
