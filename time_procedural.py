@@ -4,45 +4,25 @@ import numpy as np
 import cupy as cp
 
 
-def intercambiar_cargas_matricial(valores_sistema: IPhysicsRules, nodos: List[NodoInterface], es_grupo_circular_matriz: cp.ndarray) -> cp.ndarray:
-    # Crear una matriz de adyacencia para las cargas
-    matriz_cargas = cp.zeros((len(nodos), len(nodos)), dtype=cp.float32)
-    relaciones = [(i, next((idx for idx, n in enumerate(nodos) if n.id == rel.nodoId), -1),
-                   rel.cargaCompartida) for i, nodo in enumerate(nodos) for rel in nodo.relaciones]
-    
-    # Usar operaciones de matriz para llenar la matriz de cargas
-    indices_i, indices_j, valores = zip(*relaciones)
-    matriz_cargas[indices_i, indices_j] = valores
-
-    # Calcular las cargas compartidas
+def intercambiar_cargas_matricial(valores_sistema: IPhysicsRules, nodos: List[NodoInterface], matriz_relaciones: cp.ndarray) -> cp.ndarray:
+    matriz_cargas = matriz_relaciones  # Ya tenemos la matriz de relaciones calculada
     cargas = cp.array([nodo.cargas for nodo in nodos], dtype=cp.float32)
     matriz_cargas += (cargas[:, None] + cargas) / 2
-
-    # Aplicar el factor de estabilidad si es un grupo circular
-    matriz_cargas *= (1 - es_grupo_circular_matriz * valores_sistema.FACTOR_ESTABILIDAD)
-
+    liberar_memoria_gpu()
     return matriz_cargas
 
 
-def calcular_energia_matricial(nodos: List[NodoInterface]) -> cp.ndarray:
-    # Crear la matriz de adyacencia
-    matriz_adyacencia = cp.zeros((len(nodos), len(nodos)))
-    for idx, n in enumerate(nodos):
-        for rel in n.relaciones:
-            vecino_idx = next((i for i, v in enumerate(nodos)
-                              if v.id == rel.nodoId), -1)
-            if vecino_idx != -1:
-                matriz_adyacencia[idx, vecino_idx] = rel.cargaCompartida
+def calcular_energia_matricial(nodos: List[NodoInterface], matriz_relaciones: cp.ndarray) -> cp.ndarray:
+    # Utilizamos la matriz de relaciones ya calculada
+    matriz_adyacencia = matriz_relaciones
 
     # Calcular la carga en cadena para cada nodo
     carga_en_cadena = cp.sum(matriz_adyacencia, axis=1)
 
     # Calcular la energía para cada nodo
-    energias = 1 - \
-        cp.abs(cp.array([nodo.cargas for nodo in nodos])
-               ) + cp.abs(carga_en_cadena)
+    energias = 1 - cp.abs(cp.array([nodo.cargas for nodo in nodos])) + cp.abs(carga_en_cadena)
     energias = cp.clip(energias, None, 1)
-
+    liberar_memoria_gpu()
     return energias
 
 
@@ -57,7 +37,9 @@ def calcular_distancias_matricial(nodos: List[NodoInterface]) -> cp.ndarray:
     i_diff = coords[:, 0][:, None] - coords[:, 0]
     j_diff = coords[:, 1][:, None] - coords[:, 1]
     matriz_distancias = cp.hypot(i_diff, j_diff)
+    liberar_memoria_gpu()
     return matriz_distancias
+
 
 def relacionar_nodos_matricial(valores_sistema: IPhysicsRules, nodos: List[NodoInterface], matriz_distancias: cp.ndarray) -> cp.ndarray:
     energias = cp.array([nodo.energia for nodo in nodos])
@@ -81,7 +63,7 @@ def relacionar_nodos_matricial(valores_sistema: IPhysicsRules, nodos: List[NodoI
 
     carga_compartida = (cargas[:, None] + cargas) / 2
     matriz_relaciones = cp.where(relacion_mask, carga_compartida, 0)
-
+    liberar_memoria_gpu()
     return matriz_relaciones
 
 
@@ -92,17 +74,16 @@ def calcular_cargas(nodos: List[NodoInterface], valores_sistema: IPhysicsRules) 
     # Aplicar la probabilidad de transición
     transicion_indices = cp.random.rand(
         len(nodos)) < valores_sistema.PROBABILIDAD_TRANSICION
-    cargas[transicion_indices] = -cargas[transicion_indices]
+    cargas[transicion_indices] *= -1
 
     # Aplicar fluctuación
-    fluctuacion = (cp.random.rand(len(nodos)) * 2 - 1) * \
-        valores_sistema.FLUCTUACION_MAXIMA
+    fluctuacion = cp.random.uniform(-valores_sistema.FLUCTUACION_MAXIMA,
+                                    valores_sistema.FLUCTUACION_MAXIMA, len(nodos))
     cargas += fluctuacion
 
     # Aplicar fluctuación aleatoria
     aleatorio_indices = cp.random.rand(len(nodos)) < 0.5
-    cargas[aleatorio_indices] -= fluctuacion[aleatorio_indices]
-    cargas[~aleatorio_indices] += fluctuacion[~aleatorio_indices]
+    cargas += fluctuacion * (1 - 2 * aleatorio_indices)
 
     # Aplicar probabilidad de túnel
     tunel_indices = (cargas > 0.5) & (cp.random.rand(
@@ -111,4 +92,5 @@ def calcular_cargas(nodos: List[NodoInterface], valores_sistema: IPhysicsRules) 
 
     # Limitar las cargas a [-1, 1]
     cargas = cp.clip(cargas, -1, 1)
+    liberar_memoria_gpu()
     return cargas

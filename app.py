@@ -152,7 +152,7 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.relaciones) > systemRules.LIMITE_RELACIONAL:
+            if nodo.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.get_relaciones(self.entrenador.universo.nodos)) > systemRules.LIMITE_RELACIONAL:
                 color = (255, 255, 0)
             else:
                 if nodo.cargas > 0:

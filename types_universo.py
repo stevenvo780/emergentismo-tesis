@@ -1,4 +1,5 @@
-from typing import List, Callable
+from typing import List
+import cupy as cp
 
 
 class IPhysicsRules:
@@ -108,11 +109,18 @@ class SystemRules(ISystemRules):
         return '\n'.join(attributes)
 
 class NodoInterface:
-    def __init__(self, id: str, cargas: float, energia: float, relaciones: List['Relacion']):
+    def __init__(self, id: str, cargas: float, energia: float, relaciones_matriz: cp.ndarray):
         self.id = id
         self.cargas = cargas
         self.energia = energia
-        self.relaciones = relaciones
+        self.relaciones_matriz = relaciones_matriz  # Guardamos la matriz de relaciones directamente
+
+    def get_relaciones(self, nodos: List['NodoInterface']) -> List['Relacion']:
+        relaciones = []
+        for j, carga_compartida in enumerate(self.relaciones_matriz):
+            if carga_compartida != 0:
+                relaciones.append(Relacion(nodoId=nodos[j].id, cargaCompartida=carga_compartida))
+        return relaciones
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):
