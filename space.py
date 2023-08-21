@@ -4,24 +4,17 @@ from random import uniform
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
-import numpy as np
+import cupy as cp
+
 
 def next_step(nodos: List[NodoInterface], valores_sistema: IPhysicsRules):
-    print("Calculando distancias matriciales...")
     matriz_distancias = calcular_distancias_matricial(nodos)
-    print("Calculando relaciones matriciales...")
     matriz_relaciones = relacionar_nodos_matricial(
         valores_sistema, nodos, matriz_distancias)
     del matriz_distancias
-    print("Calculando nuevas cargas...")
-    cargas_nuevas = calcular_cargas(nodos, valores_sistema)
-    print("Calculando energías matriciales...")
-    energias = calcular_energia_matricial(nodos, matriz_relaciones)
-    print("Intercambiando cargas matriciales...")
-    matriz_cargas = intercambiar_cargas_matricial(
+    cargas_nuevas, _ = intercambiar_cargas_matricial(
         valores_sistema, nodos, matriz_relaciones)
-    cargas_nuevas += np.sum(matriz_cargas, axis=1)
-    del matriz_cargas
+    energias = calcular_energia_matricial(nodos, matriz_relaciones)
     liberar_memoria_gpu()
     for i, nodo in enumerate(nodos):
         nodo.cargas = cargas_nuevas[i].tolist()
@@ -29,8 +22,9 @@ def next_step(nodos: List[NodoInterface], valores_sistema: IPhysicsRules):
         nodo.relaciones_matriz = matriz_relaciones[i]
     del matriz_relaciones
     del cargas_nuevas
-    print("Proceso completado.")
+    print(nodos[0].cargas)
     return nodos
+
 
 def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
     return NodoInterface(
@@ -39,6 +33,7 @@ def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
         energia=energia,
         relaciones_matriz=[],
     )
+
 
 def expandir_espacio(nodos: List[NodoInterface]) -> List[NodoInterface]:
     for i in range(systemRules.CRECIMIENTO_X):
@@ -52,7 +47,8 @@ def expandir_espacio(nodos: List[NodoInterface]) -> List[NodoInterface]:
         for j in range(systemRules.CRECIMIENTO_Y):
             cargas = uniform(-1, 1)
             energia = 1 - abs(cargas)
-            nodo = crear_nodo(i, systemRules.COLUMNAS + j, cargas, energia)
+            nodo = crear_nodo(i, systemRules.COLUMNAS +
+                              j, cargas, energia)
             nodos.append(nodo)
 
     systemRules.FILAS += systemRules.CRECIMIENTO_X

@@ -25,7 +25,7 @@ class PhysicsRules(IPhysicsRules):
                  FLUCTUACION_MAXIMA=0.01,
                  PROBABILIDAD_TUNEL=0.01,
                  FACTOR_ESTABILIDAD=0.2,
-                 FACTOR_RELACION=10
+                 FACTOR_RELACION=10,
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
@@ -56,6 +56,7 @@ class ISystemRules:
     TASA_APRENDIZAJE = float
     NUM_THREADS = int
     MEJOR_PUNTAJE = int
+    LIMITE_INTERCAMBIO= float
 
 
 class SystemRules(ISystemRules):
@@ -65,8 +66,8 @@ class SystemRules(ISystemRules):
                  COLUMNAS=100,
                  INTERVALO_ENTRENAMIENTO=50,
                  PUNTAGE_MINIMO_REINICIO=20000,
-                 LIMITE_RELACIONAL=1,
-                 DISTANCIA_MAXIMA_RELACION=6,
+                 LIMITE_RELACIONAL=6,
+                 DISTANCIA_MAXIMA_RELACION=1,
                  RECOMPENSA_EXTRA_CERRADA=10000,
                  RECOMPENSA_POR_RELACION=0.1,
                  PENALIZACION_POR_RELACIONES=1000,
@@ -81,6 +82,7 @@ class SystemRules(ISystemRules):
                  TASA_APRENDIZAJE=0.5,
                  NUM_THREADS=12,
                  MEJOR_PUNTAJE=0,
+                 LIMITE_INTERCAMBIO=1,
                  ):
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
@@ -103,24 +105,29 @@ class SystemRules(ISystemRules):
         self.NUM_THREADS = NUM_THREADS
         self.MEJOR_PUNTAJE = MEJOR_PUNTAJE
         self.UMBRAL_PROPORCION = UMBRAL_PROPORCION
+        self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
+
 
 class NodoInterface:
     def __init__(self, id: str, cargas: float, energia: float, relaciones_matriz: cp.ndarray):
         self.id = id
         self.cargas = cargas
         self.energia = energia
-        self.relaciones_matriz = relaciones_matriz  # Guardamos la matriz de relaciones directamente
+        # Guardamos la matriz de relaciones directamente
+        self.relaciones_matriz = relaciones_matriz
 
     def get_relaciones(self, nodos: List['NodoInterface']) -> List['Relacion']:
         relaciones = []
         for j, carga_compartida in enumerate(self.relaciones_matriz):
             if carga_compartida != 0:
-                relaciones.append(Relacion(nodoId=nodos[j].id, cargaCompartida=carga_compartida))
+                relaciones.append(
+                    Relacion(nodoId=nodos[j].id, cargaCompartida=carga_compartida))
         return relaciones
+
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):

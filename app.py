@@ -62,9 +62,8 @@ class App:
         self.keys_pressed = {
             pygame.K_LEFT: False, pygame.K_RIGHT: False, pygame.K_UP: False, pygame.K_DOWN: False}
         self.zoom_level = 1
-        universe_width = int(self.screenSize[0] * 0.8)  # 80% de la pantalla
-        config_width = self.screenSize[0] - \
-            universe_width  # 20% de la pantalla
+        universe_width = int(self.screenSize[0] * 0.8)
+        config_width = self.screenSize[0] - universe_width
         self.universe_screen = pygame.Surface(
             (universe_width, self.screenSize[1]))
         self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
@@ -74,7 +73,8 @@ class App:
     def update_surface_dimensions(self):
         universe_width = int(self.screenSize[0] * 0.8)
         config_width = self.screenSize[0] - universe_width
-        self.universe_screen = pygame.Surface((universe_width, self.screenSize[1]))
+        self.universe_screen = pygame.Surface(
+            (universe_width, self.screenSize[1]))
         self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
         self.config_window.update_screen(self.config_screen)
 
@@ -110,7 +110,8 @@ class App:
                     self.view_offset[1] -= dy
                 elif event.type == pygame.VIDEORESIZE:
                     self.screenSize = event.size
-                    self.screen = pygame.display.set_mode(self.screenSize, pygame.RESIZABLE)
+                    self.screen = pygame.display.set_mode(
+                        self.screenSize, pygame.RESIZABLE)
                     self.update_surface_dimensions()
 
             # Desplazamiento continuo con las flechas
@@ -152,17 +153,20 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.get_relaciones(self.entrenador.universo.nodos)) > systemRules.LIMITE_RELACIONAL:
+            if nodo.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.relaciones_matriz) > systemRules.LIMITE_RELACIONAL:
                 color = (255, 255, 0)
             else:
                 if nodo.cargas > 0:
-                    blueComponent = max(
-                        0, min(255, int(255 * nodo.cargas)))
+                    blueComponent = max(0, min(255, int(255 * nodo.cargas)))
                     color = (0, 200, blueComponent)
                 else:
-                    greyComponent = max(
-                        0, min(255, 200 - int(255 * abs(nodo.cargas))))
-                    color = (greyComponent, greyComponent, greyComponent)
+                    cargas_value = abs(nodo.cargas)
+                    if cargas_value != float('inf'):
+                        greyComponent = max(
+                            0, min(255, 200 - int(255 * cargas_value)))
+                        color = (greyComponent, greyComponent, greyComponent)
+                    else:
+                        color = (0, 0, 0)
 
             # Cambia la siguiente línea para dibujar en self.universe_screen en lugar de self.screen
             pygame.draw.rect(self.universe_screen, color,

@@ -8,7 +8,6 @@ from keras.models import Sequential
 from keras.layers import Dense
 import json
 
-
 class Entrenador:
     def __init__(self):
         self.puntaje_guardado = float('-inf')
@@ -100,18 +99,15 @@ class Entrenador:
         neural_network.set_weights(weights)
 
     def iniciarEntrenamiento(self):
-        self.entrenamiento_thread = Thread(target=self.entrenamientoPerpetuo)
+        self.entrenamiento_thread = Thread(target=self.nextStepRecursivo)
         self.entrenamiento_thread.start()
 
-    def entrenamientoPerpetuo(self):
-        while True:
-            self.nextStepRecursivo()
-
     def nextStepRecursivo(self):
-        self.universo.next()
-        self.universo.tiempo += 1
-        if self.universo.tiempo % self.intervaloEntrenamiento == 0:
-            self.entrenar()
+        while True:
+            self.universo.next()
+            self.universo.tiempo += 1
+            if self.universo.tiempo % self.intervaloEntrenamiento == 0:
+                self.entrenar()
 
     def actualizarConfiguracion(self, intervaloEntrenamiento, tasaDeAprendizaje):
         self.intervaloEntrenamiento = intervaloEntrenamiento

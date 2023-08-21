@@ -1,36 +1,16 @@
 from types_universo import NodoInterface, IPhysicsRules, PhysicsRules, systemRules
 from space import next_step, expandir_espacio, crear_nodo
 import random
-from datetime import datetime
-from typing import Dict, List
+from uuid import uuid4
+from typing import List
 
 class Universo:
     def __init__(self, physicsRules: 'IPhysicsRules' = PhysicsRules()):
         self.nodos: List['NodoInterface'] = []
         self.physicsRules = physicsRules
-        self.id = self.generarId()
+        self.id = str(uuid4())
         self.determinacionesDelSistema()
         self.tiempo: int = 0
-
-    def generarId(self) -> str:
-        return (
-            datetime.now().isoformat() +
-            '-' +
-            str(systemRules.FILAS) +
-            '-' +
-            str(systemRules.COLUMNAS) +
-            '-' +
-            str(int(random.random() * 1e9))
-        )
-
-    def deserializarId(self, id: str) -> Dict[str, object]:
-        partes = id.split('-')
-        return {
-            'fecha': partes[0],
-            'filas': int(partes[1]),
-            'columnas': int(partes[2]),
-            'randomString': partes[3],
-        }
 
     def determinacionesDelSistema(self):
         for i in range(systemRules.FILAS):
@@ -46,6 +26,4 @@ class Universo:
     def next(self):
         self.nodos = next_step(self.nodos, self.physicsRules)
         if self.tiempo % 100 == 0:
-            # Asumiendo que expandirEspacio es definido en otro lugar
             expandir_espacio(self.nodos)
-
