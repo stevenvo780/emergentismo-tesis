@@ -196,7 +196,7 @@ class Entrenador:
             self.evolve_population(recompensas)
         print('total_recompensa', total_recompensa)
         if mejores_nuevos_valores is not None:
-            if mejor_recompensa > systemRules.MEJOR_PUNTAJE:
+            if total_recompensa > systemRules.MEJOR_PUNTAJE:
                 systemRules.MEJOR_PUNTAJE = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
