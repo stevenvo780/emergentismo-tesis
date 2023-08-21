@@ -64,7 +64,7 @@ class SystemRules(ISystemRules):
                  COLUMNAS=100,
                  INTERVALO_ENTRENAMIENTO=50,
                  PUNTAGE_MINIMO_REINICIO=20000,
-                 LIMITE_RELACIONAL=3,
+                 LIMITE_RELACIONAL=1,
                  DISTANCIA_MAXIMA_RELACION=6,
                  RECOMPENSA_EXTRA_CERRADA=10000,
                  RECOMPENSA_POR_RELACION=0.1,
@@ -107,28 +107,12 @@ class SystemRules(ISystemRules):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
 
-
 class NodoInterface:
-    def __init__(self, id: str, memoria: 'Memoria'):
+    def __init__(self, id: str, cargas: float, energia: float, relaciones: List['Relacion']):
         self.id = id
-        self.memoria = memoria
-
-
-class Memoria:
-    def __init__(self, cargas: float, energia: float, edad: int, procesos: 'Procesos', relaciones: List['Relacion']):
         self.cargas = cargas
         self.energia = energia
-        self.edad = edad
-        self.procesos = procesos
         self.relaciones = relaciones
-
-
-class Procesos:
-    def __init__(self, relacionarNodos: Callable[['IPhysicsRules', 'NodoInterface', List['NodoInterface']], None],
-                 intercambiarCargas: Callable[['IPhysicsRules', 'NodoInterface', 'NodoInterface', bool], None]):
-        self.relacionarNodos = relacionarNodos
-        self.intercambiarCargas = intercambiarCargas
-
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):

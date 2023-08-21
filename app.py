@@ -152,16 +152,16 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.memoria.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.memoria.relaciones) > systemRules.LIMITE_RELACIONAL:
+            if nodo.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.relaciones) > systemRules.LIMITE_RELACIONAL:
                 color = (255, 255, 0)
             else:
-                if nodo.memoria.cargas > 0:
+                if nodo.cargas > 0:
                     blueComponent = max(
-                        0, min(255, int(255 * nodo.memoria.cargas)))
+                        0, min(255, int(255 * nodo.cargas)))
                     color = (0, 200, blueComponent)
                 else:
                     greyComponent = max(
-                        0, min(255, 200 - int(255 * abs(nodo.memoria.cargas))))
+                        0, min(255, 200 - int(255 * abs(nodo.cargas))))
                     color = (greyComponent, greyComponent, greyComponent)
 
             # Cambia la siguiente línea para dibujar en self.universe_screen en lugar de self.screen

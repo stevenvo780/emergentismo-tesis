@@ -1,6 +1,5 @@
-from time_procedural import expandir_espacio, crear_nodo
 from types_universo import NodoInterface, IPhysicsRules, PhysicsRules, systemRules
-from space import next_step
+from space import next_step, expandir_espacio, crear_nodo
 import random
 from datetime import datetime
 from typing import Dict, List
@@ -48,5 +47,5 @@ class Universo:
         self.nodos = next_step(self.nodos, self.physicsRules)
         if self.tiempo % 100 == 0:
             # Asumiendo que expandirEspacio es definido en otro lugar
-            expandir_espacio(self.nodos, self.physicsRules)
+            expandir_espacio(self.nodos)
 

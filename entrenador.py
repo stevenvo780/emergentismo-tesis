@@ -128,7 +128,7 @@ class Entrenador:
             local_closed_count = 0
             for i in range(start_index, end_index):
                 nodo = nodos[i]
-                nodosRelacionados = [rel.nodoId for rel in nodo.memoria.relaciones]
+                nodosRelacionados = [rel.nodoId for rel in nodo.relaciones]
                 local_count += len(nodosRelacionados)
                 if i in nodosRelacionados:
                     local_closed_count += 1
