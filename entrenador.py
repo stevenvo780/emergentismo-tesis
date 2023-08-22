@@ -26,9 +26,14 @@ class Entrenador:
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal(
         ) for i in range(systemRules.NEURONAS_CANTIDAD)]
 
-    def vigilar(self):
+    def iniciarEntrenamiento(self):
+        self.entrenamiento_thread = Thread(target=self.big_bang)
+        self.entrenamiento_thread.start()
+
+    def big_bang(self):
         while True:
-            time.sleep(1)
+            self.universo.next()
+            self.universo.tiempo += 1
             if self.universo.tiempo % self.intervaloEntrenamiento == 0 and self.universo.tiempo != 0:
                 self.entrenar()
 
@@ -116,28 +121,29 @@ class Entrenador:
                                                factor, weights[i].shape) * 0.5
         neural_network.set_weights(weights)
 
-    def iniciarEntrenamiento(self):
-        self.entrenamiento_thread = Thread(target=self.vigilar)
-        self.entrenamiento_thread.start()
-
     def actualizarConfiguracion(self, intervaloEntrenamiento, tasaDeAprendizaje):
         self.intervaloEntrenamiento = intervaloEntrenamiento
         self.tasaDeAprendizaje = tasaDeAprendizaje
 
     def calcularRecompensa(self):
         matriz_relaciones = self.universo.matriz_relaciones
-        numeroDeRelaciones = cp.sum(matriz_relaciones > 0)
-        numeroDeEstructurasCerradas = cp.sum(matriz_relaciones.diagonal() > 0)
-        recompensa_por_relaciones = numeroDeRelaciones.item() * \
+        numeroDeRelaciones = cp.sum(matriz_relaciones > 0).item()
+        numeroDeEstructurasCerradas = cp.sum(
+            matriz_relaciones.diagonal() > 0).item()
+
+        numeroDeRelaciones = np.array(numeroDeRelaciones)
+        numeroDeEstructurasCerradas = np.array(numeroDeEstructurasCerradas)
+        recompensa_por_relaciones = numeroDeRelaciones * \
             systemRules.RECOMPENSA_POR_RELACION
         recompensa = recompensa_por_relaciones + \
-            (numeroDeEstructurasCerradas.item() *
+            (numeroDeEstructurasCerradas *
              systemRules.RECOMPENSA_EXTRA_CERRADA)
         proporcion_estructuras_cerradas = numeroDeEstructurasCerradas / \
             (numeroDeRelaciones + 1e-5)
+
         if numeroDeEstructurasCerradas > 0:
             print('numeroDeEstructurasCerradas',
-                  numeroDeEstructurasCerradas.item())
+                  numeroDeEstructurasCerradas)
         if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION:
             penalizacion = (systemRules.UMBRAL_PROPORCION - proporcion_estructuras_cerradas) * \
                 10 * systemRules.PENALIZACION_POR_RELACIONES

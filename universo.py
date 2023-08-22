@@ -26,7 +26,6 @@ class Universo:
         self.matriz_distancias: cp.ndarray
         self.matriz_relaciones: cp.ndarray
         self.lock = Lock()
-        self.singularidad()
 
     def determinacionesDelSistema(self):
         for i in range(systemRules.FILAS):
@@ -43,6 +42,7 @@ class Universo:
         self.cargasMatriz = cp.array(
             [nodo.cargas for nodo in self.nodos], dtype=cp.float16)
         self.matriz_distancias = calcular_distancias_matricial(self.nodos)
+        self.state = True
 
     def actualizar_nodos(self):
         try:
@@ -63,12 +63,3 @@ class Universo:
             self.cargasMatriz = cp.array(
                 [nodo.cargas for nodo in self.nodos], dtype=cp.float16)
             self.matriz_distancias = calcular_distancias_matricial(self.nodos)
-
-    def big_bang(self):
-        while True:
-            self.next()
-            self.tiempo += 1
-
-    def singularidad(self):
-        self.entrenamiento_thread = Thread(target=self.big_bang)
-        self.entrenamiento_thread.start()
