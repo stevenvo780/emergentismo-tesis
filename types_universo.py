@@ -1,7 +1,6 @@
 from typing import List
 import cupy as cp
 
-
 class IPhysicsRules:
     FILAS: int
     COLUMNAS: int
@@ -14,7 +13,6 @@ class IPhysicsRules:
     FLUCTUACION_MAXIMA: float
     PROBABILIDAD_TUNEL: float
     FACTOR_RELACION: int
-
 
 class PhysicsRules(IPhysicsRules):
     def __init__(self,
@@ -64,7 +62,7 @@ class SystemRules(ISystemRules):
                  GIRD_SIZE=100,
                  FILAS=100,
                  COLUMNAS=100,
-                 INTERVALO_ENTRENAMIENTO=200,
+                 INTERVALO_ENTRENAMIENTO=50,
                  PUNTAGE_MINIMO_REINICIO=20000,
                  LIMITE_RELACIONAL=6,
                  DISTANCIA_MAXIMA_RELACION=1,
@@ -118,7 +116,6 @@ class NodoInterface:
         self.cargas = cargas
         self.energia = energia
         self.relaciones = []
-
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):

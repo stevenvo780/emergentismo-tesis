@@ -8,6 +8,7 @@ from keras.models import Sequential
 from keras.layers import Dense
 import json
 import time
+import cupy as cp
 
 
 class Entrenador:
@@ -123,45 +124,24 @@ class Entrenador:
         self.intervaloEntrenamiento = intervaloEntrenamiento
         self.tasaDeAprendizaje = tasaDeAprendizaje
 
-    def calcularRecompensa(self, nodos):
-        self.universo.actualizar_nodos()
-        numeroDeRelaciones = 0
-        numeroDeEstructurasCerradas = 0
-        step = len(nodos) // systemRules.NUM_THREADS
-
-        def process_nodes(start_index, end_index):
-            nonlocal numeroDeRelaciones, numeroDeEstructurasCerradas
-            local_count = 0
-            local_closed_count = 0
-            for i in range(start_index, end_index):
-                nodo = nodos[i]
-                nodosRelacionados = [
-                    rel.nodoId for rel in nodo.relaciones]
-                local_count += len(nodosRelacionados)
-                if i in nodosRelacionados:
-                    local_closed_count += 1
-            with self.lock:
-                numeroDeRelaciones += local_count
-                numeroDeEstructurasCerradas += local_closed_count
-
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(process_nodes, i * step, (i + 1) * step if i !=
-                                       systemRules.NUM_THREADS - 1 else len(nodos)) for i in range(systemRules.NUM_THREADS)]
-            wait(futures)
-
-        recompensa_por_relaciones = numeroDeRelaciones * \
+    def calcularRecompensa(self):
+        matriz_relaciones = self.universo.matriz_relaciones
+        numeroDeRelaciones = cp.sum(matriz_relaciones > 0)
+        numeroDeEstructurasCerradas = cp.sum(matriz_relaciones.diagonal() > 0)
+        recompensa_por_relaciones = numeroDeRelaciones.item() * \
             systemRules.RECOMPENSA_POR_RELACION
         recompensa = recompensa_por_relaciones + \
-            (numeroDeEstructurasCerradas * systemRules.RECOMPENSA_EXTRA_CERRADA)
+            (numeroDeEstructurasCerradas.item() *
+             systemRules.RECOMPENSA_EXTRA_CERRADA)
         proporcion_estructuras_cerradas = numeroDeEstructurasCerradas / \
             (numeroDeRelaciones + 1e-5)
         if numeroDeEstructurasCerradas > 0:
-            print('numeroDeEstructurasCerradas', numeroDeEstructurasCerradas)
+            print('numeroDeEstructurasCerradas',
+                  numeroDeEstructurasCerradas.item())
         if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION:
             penalizacion = (systemRules.UMBRAL_PROPORCION - proporcion_estructuras_cerradas) * \
                 10 * systemRules.PENALIZACION_POR_RELACIONES
             recompensa -= penalizacion
-
         return recompensa
 
     def reiniciarUniverso(self, mejores_nuevos_valores):
@@ -175,10 +155,12 @@ class Entrenador:
 
     def fitness_function(self, nuevos_valores):
         self.aplicar_nuevos_valores(nuevos_valores)
-        return self.calcularRecompensa(self.universo.nodos)
+        return self.calcularRecompensa()
 
     def entrenar(self):
-        mejores_nuevos_valores, mejor_recompensa = None, float('-inf')
+        mejores_nuevos_valores = [
+            getattr(self.universo.physics_rules, key) for key in self.claves_parametros]
+        mejor_recompensa = float('-inf')
         recompensas = []
         for nn in self.poblacion:
             nuevos_valores = self.calcular_nuevos_valores(nn)
@@ -202,7 +184,8 @@ class Entrenador:
             for nn in self.poblacion:
                 self.mutate(nn, increase_mutation=False)
 
-        best_nn = self.poblacion[np.argmax(recompensas)]
+        recompensas_np = cp.asarray(recompensas).get()
+        best_nn = self.poblacion[np.argmax(recompensas_np)]
         self.guardar_red_neuronal(best_nn)
 
         if total_recompensa != 0:
@@ -222,11 +205,23 @@ class Entrenador:
         self.poblacion[0] = best_nn
 
     def evolve_population(self, recompensas):
-        total_recompensa = sum(recompensas)
-        probabilidades_seleccion = [
-            rec / total_recompensa for rec in recompensas]
-        seleccionados = np.random.choice(self.poblacion, size=len(
-            self.poblacion), p=probabilidades_seleccion)
+        # Converting recompensas to a NumPy array
+        recompensas_np = cp.asarray(recompensas).get()
+        min_recompensa = min(recompensas_np)
+        adjusted_recompensas = recompensas_np - min_recompensa
+        total_recompensa = sum(adjusted_recompensas)
+
+        # Avoid division by zero if the total reward is zero
+        if total_recompensa == 0:
+            probabilidades_seleccion = [
+                1.0 / len(adjusted_recompensas)] * len(adjusted_recompensas)
+        else:
+            probabilidades_seleccion = [
+                rec / total_recompensa for rec in adjusted_recompensas]
+
+        indices_seleccionados = np.random.choice(
+            len(self.poblacion), size=len(self.poblacion), p=probabilidades_seleccion)
+        seleccionados = [self.poblacion[i] for i in indices_seleccionados]
         nueva_poblacion = []
         for i in range(0, len(seleccionados), 2):
             parent1 = seleccionados[i]
