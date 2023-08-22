@@ -64,7 +64,7 @@ class SystemRules(ISystemRules):
                  GIRD_SIZE=100,
                  FILAS=100,
                  COLUMNAS=100,
-                 INTERVALO_ENTRENAMIENTO=50,
+                 INTERVALO_ENTRENAMIENTO=200,
                  PUNTAGE_MINIMO_REINICIO=20000,
                  LIMITE_RELACIONAL=6,
                  DISTANCIA_MAXIMA_RELACION=1,
@@ -82,7 +82,7 @@ class SystemRules(ISystemRules):
                  TASA_APRENDIZAJE=0.5,
                  NUM_THREADS=12,
                  MEJOR_PUNTAJE=0,
-                 LIMITE_INTERCAMBIO=1,
+                 LIMITE_INTERCAMBIO=10,
                  ):
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
@@ -113,20 +113,11 @@ class SystemRules(ISystemRules):
 
 
 class NodoInterface:
-    def __init__(self, id: str, cargas: float, energia: float, relaciones_matriz: cp.ndarray):
+    def __init__(self, id: str, cargas: float, energia: float):
         self.id = id
         self.cargas = cargas
         self.energia = energia
-        # Guardamos la matriz de relaciones directamente
-        self.relaciones_matriz = relaciones_matriz
-
-    def get_relaciones(self, nodos: List['NodoInterface']) -> List['Relacion']:
-        relaciones = []
-        for j, carga_compartida in enumerate(self.relaciones_matriz):
-            if carga_compartida != 0:
-                relaciones.append(
-                    Relacion(nodoId=nodos[j].id, cargaCompartida=carga_compartida))
-        return relaciones
+        self.relaciones = []
 
 
 class Relacion:

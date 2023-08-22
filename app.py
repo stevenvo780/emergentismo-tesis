@@ -1,7 +1,7 @@
 import pygame
 from entrenador import Entrenador
 from types_universo import systemRules
-
+import cupy as cp
 pygame.init()
 
 
@@ -20,7 +20,7 @@ class ConfigWindow:
     def refresh(self, entrenador):
         self.entrenador = entrenador
         self.screen.fill((255, 255, 255))  # Fondo blanco
-        physicsRules = vars(self.entrenador.universo.physicsRules).items()
+        physics_rules = vars(self.entrenador.universo.physics_rules).items()
         system_rules = vars(systemRules).items()
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
@@ -37,21 +37,20 @@ class ConfigWindow:
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(label, (10, 80 + i * 20))
 
-        for i, (attribute, value) in enumerate(physicsRules):
+        for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(label, (10, (500 + i * 20)))
 
     def update_configurations(self):
-        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physicsRules).items()):
+        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physics_rules).items()):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(
                 label, (self.screen.get_width() // 2 + 10, 10 + i * 20))
 
 
 class App:
-    def __init__(self):
-        self.entrenador = Entrenador()
-        self.entrenador.iniciarEntrenamiento()
+    def __init__(self, entrenador):
+        self.entrenador = entrenador
         self.gridSize = int(len(self.entrenador.universo.nodos) ** 0.5)
         self.cellSize = 10
         self.view_offset = [0, 0]
@@ -136,15 +135,12 @@ class App:
         pygame.quit()
 
     def update_grid(self):
-        new_gridSize = int(len(self.entrenador.universo.nodos) ** 0.5)
-
-        # Si la retícula ha crecido, actualizar la gridSize
-        if new_gridSize != self.gridSize:
-            self.gridSize = new_gridSize
-
         self.universe_screen.fill((0, 0, 0))   # Limpiar la pantalla
 
-        for index, nodo in enumerate(self.entrenador.universo.nodos):
+        cargas = cp.asnumpy(self.entrenador.universo.cargasMatriz)
+        energias = cp.asnumpy(self.entrenador.universo.energiasMatriz)
+
+        for index, (carga, energia) in enumerate(zip(cargas, energias)):
             cellSize = self.cellSize * self.zoom_level
             x = (index % self.gridSize) * cellSize - self.view_offset[0]
             y = (index // self.gridSize) * cellSize - self.view_offset[1]
@@ -153,14 +149,14 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.relaciones_matriz) > systemRules.LIMITE_RELACIONAL:
+            if energia > self.entrenador.universo.physics_rules.ENERGIA and carga > systemRules.LIMITE_RELACIONAL:
                 color = (255, 255, 0)
             else:
-                if nodo.cargas > 0:
-                    blueComponent = max(0, min(255, int(255 * nodo.cargas)))
+                if carga > 0:
+                    blueComponent = max(0, min(255, int(255 * carga)))
                     color = (0, 200, blueComponent)
                 else:
-                    cargas_value = abs(nodo.cargas)
+                    cargas_value = abs(carga)
                     if cargas_value != float('inf'):
                         greyComponent = max(
                             0, min(255, 200 - int(255 * cargas_value)))
@@ -168,11 +164,12 @@ class App:
                     else:
                         color = (0, 0, 0)
 
-            # Cambia la siguiente línea para dibujar en self.universe_screen en lugar de self.screen
             pygame.draw.rect(self.universe_screen, color,
                              (x, y, cellSize, cellSize))
 
 
 if __name__ == '__main__':
-    app = App()
+    entrenador = Entrenador()
+    entrenador.iniciarEntrenamiento()
+    app = App(entrenador)
     app.run()

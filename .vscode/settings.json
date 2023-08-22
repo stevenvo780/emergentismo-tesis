@@ -11,6 +11,7 @@
     "energia",
     "Energia",
     "energias",
+    "estocastica",
     "fluctuacion",
     "FLUCTUACION",
     "generacion",
@@ -22,7 +23,10 @@
     "PUNTAGE",
     "relacion",
     "seleccion",
+    "simulacion",
+    "transicion",
     "TRANSICION",
+    "tunel",
     "TUNEL"
   ]
 }
