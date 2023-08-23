@@ -80,7 +80,7 @@ class SystemRules(ISystemRules):
                  NUM_THREADS=12,
                  MEJOR_PUNTAJE=0,
                  LIMITE_INTERCAMBIO=100,
-                 GENERACIONES_PARA_REINICIO=10,
+                 GENERACIONES_PARA_REINICIO=50,
                  TOLERANCIA_ENERGIA=1,
                  MEMORIA_POR_FILA=1,
                  FILAS_POR_GB=1,

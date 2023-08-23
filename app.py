@@ -9,7 +9,6 @@ class ConfigWindow:
     def __init__(self, entrenador, screen):
         self.entrenador = entrenador
         self.screen = screen
-        self.font = pygame.font.Font(None, 24)
 
     def update_screen(self, screen):
         self.screen = screen
@@ -22,24 +21,25 @@ class ConfigWindow:
         self.screen.fill((255, 255, 255))  # Fondo blanco
         physics_rules = vars(self.entrenador.universo.physics_rules).items()
         system_rules = vars(systemRules).items()
+        self.font = pygame.font.Font(None, 20)
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
         time_structure_label = self.font.render(
-            f"Tiempo sin estructura: {self.entrenador.tiempoSinEstructuras}", True, (0, 0, 0))
-        id_label = self.font.render(
-            f"ID: {self.entrenador.universo.id}", True, (0, 0, 0))
+            f"Mejor recompensa: {self.entrenador.mejor_recompensa}", True, (0, 0, 0))
+        fail_time = self.font.render(
+            f"Tiempo sin mejora: {self.entrenador.generaciones_sin_mejora}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
         self.screen.blit(time_structure_label, (10, 35))
-        self.screen.blit(id_label, (10, 55))
-
+        self.screen.blit(fail_time, (10, 55))
+        self.font = pygame.font.Font(None, 18)
         for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, 80 + i * 20))
+            self.screen.blit(label, (6, 80 + i * 18))
 
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, (540 + i * 20)))
+            self.screen.blit(label, (6, (560 + i * 18)))
 
     def update_configurations(self):
         for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physics_rules).items()):
@@ -70,11 +70,12 @@ class App:
         self.update_surface_dimensions()
 
     def update_surface_dimensions(self):
-        universe_width = int(self.screenSize[0] * 0.8)
-        config_width = self.screenSize[0] - universe_width
+        # Cambio en la proporción para configuración
+        config_width = int(self.screenSize[0] * 0.3)
+        universe_width = self.screenSize[0] - config_width
+        self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
         self.universe_screen = pygame.Surface(
             (universe_width, self.screenSize[1]))
-        self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
         self.config_window.update_screen(self.config_screen)
 
     def run(self):
@@ -125,9 +126,10 @@ class App:
 
             self.update_grid()
             self.config_window.refresh(self.entrenador)
-            self.screen.blit(self.universe_screen, (0, 0))
-            self.screen.blit(self.config_screen,
-                             (self.universe_screen.get_width(), 0))
+            # Coloca primero la ventana de configuración
+            self.screen.blit(self.config_screen, (0, 0))
+            self.screen.blit(self.universe_screen,
+                             (self.config_screen.get_width(), 0))
             pygame.display.flip()
             # Reducir el delay para un movimiento más suave
             pygame.time.delay(50)

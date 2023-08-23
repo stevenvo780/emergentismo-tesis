@@ -3,13 +3,13 @@ from universo import Universo
 from types_universo import PhysicsRules, systemRules
 import random
 from threading import Thread, Lock
-from concurrent.futures import ThreadPoolExecutor, wait
 from keras.models import Sequential
 from keras.layers import Dense
+from keras.initializers import RandomUniform
 import json
-import networkx as nx
 import numpy as np
 import cupy as cp
+
 
 def contar_estructuras_cerradas(matriz_relaciones):
     matriz_adj = (matriz_relaciones > 0).astype(cp.int32)
@@ -20,19 +20,16 @@ def contar_estructuras_cerradas(matriz_relaciones):
     }
     return estructuras_cerradas
 
+
 class Entrenador:
     def __init__(self):
         self.mejor_recompensa = float('-inf')
         self.generaciones_sin_mejora = 0
-        self.puntaje_guardado = float('-inf')
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
             self.universo.physics_rules).keys()]
         self.cargar_mejor_universo()
         self.cargar_mejor_puntaje()
-        self.intervaloEntrenamiento = systemRules.INTERVALO_ENTRENAMIENTO
-        self.tasaDeAprendizaje = systemRules.TASA_APRENDIZAJE
-        self.tiempoSinEstructuras = 0
         self.lock = Lock()
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal(
         ) for i in range(systemRules.NEURONAS_CANTIDAD)]
@@ -45,13 +42,15 @@ class Entrenador:
         while True:
             self.universo.next()
             self.universo.tiempo += 1
-            if self.universo.tiempo % self.intervaloEntrenamiento == 0 and self.universo.tiempo != 0:
+            if self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0 and self.universo.tiempo != 0:
                 self.entrenar()
 
     def cargar_mejor_puntaje(self):
         try:
             with open('system_rules.json', 'r') as file:
                 rules = json.load(file)
+                self.mejor_recompensa = rules.get(
+                    "MEJOR_RECOMPENSA", float('-inf'))
                 for key, value in rules.items():
                     if key == "NUM_THREADS":
                         value = value[0] if isinstance(value, list) else value
@@ -62,6 +61,7 @@ class Entrenador:
     def guardar_mejor_puntaje(self):
         rules = {key: getattr(systemRules, key) for key in dir(
             systemRules) if not key.startswith('__')}
+        rules["MEJOR_RECOMPENSA"] = self.mejor_recompensa
         with open('system_rules.json', 'w') as file:
             json.dump(rules, file)
 
@@ -94,9 +94,12 @@ class Entrenador:
 
     def crear_red_neuronal(self):
         model = Sequential([
-            Dense(12, input_dim=len(self.claves_parametros), activation='relu'),
-            Dense(8, activation='relu'),
-            Dense(len(self.claves_parametros), activation='sigmoid')
+            Dense(12, input_dim=len(self.claves_parametros), activation='relu',
+                  kernel_initializer=RandomUniform(minval=-1, maxval=1)),
+            Dense(16, activation='relu',
+                  kernel_initializer=RandomUniform(minval=-1, maxval=1)),
+            Dense(len(self.claves_parametros), activation='sigmoid',
+                  kernel_initializer=RandomUniform(minval=-1, maxval=1))
         ])
         model.compile(loss='mse', optimizer='adam')
         return model
@@ -130,27 +133,23 @@ class Entrenador:
             weights[i] += np.random.normal(0, mutation_rate, weights[i].shape)
         neural_network.set_weights(weights)
 
-    def actualizarConfiguracion(self, intervaloEntrenamiento, tasaDeAprendizaje):
-        self.intervaloEntrenamiento = intervaloEntrenamiento
-        self.tasaDeAprendizaje = tasaDeAprendizaje
-
     def calcularRecompensa(self):
         matriz_relaciones = self.universo.matriz_relaciones
         numeroDeRelaciones = cp.sum(matriz_relaciones > 0).item()
 
         estructuras_cerradas = contar_estructuras_cerradas(matriz_relaciones)
-        recompensa_por_relaciones = numeroDeRelaciones * systemRules.RECOMPENSA_POR_RELACION
+        recompensa_por_relaciones = numeroDeRelaciones * \
+            systemRules.RECOMPENSA_POR_RELACION
         recompensa = recompensa_por_relaciones
 
         total_estructuras_cerradas = 0
-        multiplicador = 1
         for idx, (estructura, cantidad) in enumerate(estructuras_cerradas.items()):
-            #print(f'{estructura}: {cantidad}')
+            # print(f'{estructura}: {cantidad}')
             total_estructuras_cerradas += cantidad
-            recompensa += cantidad * systemRules.RECOMPENSA_EXTRA_CERRADA * multiplicador
-            multiplicador += 1 # Puedes ajustar cómo cambia el multiplicador aquí
+            recompensa += cantidad * systemRules.RECOMPENSA_EXTRA_CERRADA * idx
 
-        proporcion_estructuras_cerradas = total_estructuras_cerradas / (numeroDeRelaciones + 1e-5)
+        proporcion_estructuras_cerradas = total_estructuras_cerradas / \
+            (numeroDeRelaciones + 1e-5)
 
         if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION:
             penalizacion = (systemRules.UMBRAL_PROPORCION - proporcion_estructuras_cerradas) * \
@@ -175,19 +174,18 @@ class Entrenador:
     def entrenar(self):
         mejores_nuevos_valores = [
             getattr(self.universo.physics_rules, key) for key in self.claves_parametros]
-        mejor_recompensa = float('-inf')
         recompensas = []
         for nn in self.poblacion:
             nuevos_valores = self.calcular_nuevos_valores(nn)
             nuevos_valores = self.transformar_valores(nuevos_valores)
             recompensa = self.fitness_function(nuevos_valores)
             recompensas.append(recompensa)
-            if recompensa > mejor_recompensa:
-                mejor_recompensa = recompensa
+            if recompensa > self.mejor_recompensa:
+                self.mejor_recompensa = recompensa
                 mejores_nuevos_valores = nuevos_valores
 
         total_recompensa = sum(recompensas)
-        if total_recompensa == 0:
+        if total_recompensa <= 0:
             for nn in self.poblacion:
                 self.mutate(nn, increase_mutation=True)
             fraction_to_reset = 0.2
@@ -214,7 +212,6 @@ class Entrenador:
             if total_recompensa < systemRules.MEJOR_PUNTAJE:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)
-                self.puntaje_guardado = mejor_recompensa
 
         print(mejores_nuevos_valores)
         self.poblacion[0] = best_nn
@@ -249,7 +246,7 @@ class Entrenador:
             child1, child2 = self.crossover(parent1, parent2)
             nueva_poblacion.extend([child1, child2])
         for nn in nueva_poblacion:
-            if random.random() < self.tasaDeAprendizaje:
+            if random.random() < systemRules.TASA_APRENDIZAJE:
                 self.mutate(nn)
         self.poblacion = nueva_poblacion
         max_recompensa = max(recompensas)
