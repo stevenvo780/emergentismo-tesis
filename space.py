@@ -1,5 +1,5 @@
-from types_universo import NodoInterface, systemRules, IPhysicsRules, Relacion
-from time_procedural import calcular_energia_matricial, calcular_cargas, calcular_distancias_matricial, relacionar_nodos_matricial
+from types_universo import NodoInterface, systemRules
+from time_procedural import calcular_energia_matricial, calcular_cargas, relacionar_nodos_matricial
 from random import uniform
 from typing import List
 import cupy as cp

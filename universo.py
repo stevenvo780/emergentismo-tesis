@@ -1,4 +1,4 @@
-from types_universo import NodoInterface, IPhysicsRules, PhysicsRules, systemRules, Relacion
+from types_universo import NodoInterface, PhysicsRules, systemRules, Relacion
 from space import next_step, expandir_espacio, crear_nodo
 from time_procedural import calcular_distancias_matricial
 import random
@@ -6,7 +6,7 @@ from uuid import uuid4
 from typing import List
 import cupy as cp
 from concurrent.futures import ThreadPoolExecutor
-from threading import Thread, Lock
+from threading import Lock
 
 def update_node(nodo, carga_nueva, energia_nueva, matriz_relacion, nodos):
     nodo.cargas = carga_nueva.tolist()
@@ -15,7 +15,7 @@ def update_node(nodo, carga_nueva, energia_nueva, matriz_relacion, nodos):
                        for j, carga_compartida in enumerate(matriz_relacion) if carga_compartida != 0]
 
 class Universo:
-    def __init__(self, physics_rules: 'IPhysicsRules' = PhysicsRules()):
+    def __init__(self, physics_rules: 'PhysicsRules' = PhysicsRules()):
         self.nodos: List['NodoInterface'] = []
         self.physics_rules = physics_rules
         self.id = str(uuid4())
@@ -24,7 +24,7 @@ class Universo:
         self.energiasMatriz: cp.ndarray
         self.cargasMatriz: cp.ndarray
         self.matriz_distancias: cp.ndarray
-        self.matriz_relaciones: cp.ndarray
+        self.matriz_relaciones: cp.ndarray = cp.zeros_like(self.matriz_distancias)
         self.lock = Lock()
 
     def determinacionesDelSistema(self):

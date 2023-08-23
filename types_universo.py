@@ -1,22 +1,4 @@
-from typing import List
-import cupy as cp
-
-
-class IPhysicsRules:
-    FILAS: int
-    COLUMNAS: int
-    PROBABILIDAD_VIDA_INICIAL: float
-    REDUCCION_CARGA: float
-    UMBRAL_CARGA: float
-    FACTOR_ESTABILIDAD: float
-    ENERGIA: float
-    PROBABILIDAD_TRANSICION: float
-    FLUCTUACION_MAXIMA: float
-    PROBABILIDAD_TUNEL: float
-    FACTOR_RELACION: int
-
-
-class PhysicsRules(IPhysicsRules):
+class PhysicsRules():
     def __init__(self,
                  PROBABILIDAD_VIDA_INICIAL=0.99999,
                  UMBRAL_CARGA=0.1,
@@ -29,81 +11,73 @@ class PhysicsRules(IPhysicsRules):
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
-        self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
         self.ENERGIA = ENERGIA
         self.PROBABILIDAD_TRANSICION = PROBABILIDAD_TRANSICION
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
         self.PROBABILIDAD_TUNEL = PROBABILIDAD_TUNEL
+        self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
         self.FACTOR_RELACION = FACTOR_RELACION
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
 
-
-class ISystemRules:
-    FILAS = int,
-    COLUMNAS = int,
-    INTERVALO_ENTRENAMIENTO = int
-    LIMITE_RELACIONAL = int
-    DISTANCIA_MAXIMA_RELACION = int
-    FACTOR_RELACION_LIMIT = int
-    CRECIMIENTO_X = int
-    CRECIMIENTO_Y = int
-    NEURONAL_FACTOR = float
-    NEURONAS_CANTIDAD = float
-    TASA_APRENDIZAJE = float
-    NUM_THREADS = int
-    MEJOR_PUNTAJE = int
-    LIMITE_INTERCAMBIO = float
-
-
-class SystemRules(ISystemRules):
+class SystemRules:
     def __init__(self,
+                 # GRID
                  GIRD_SIZE=100,
                  FILAS=100,
                  COLUMNAS=100,
-                 INTERVALO_ENTRENAMIENTO=100,
-                 LIMITE_RELACIONAL=1,
-                 DISTANCIA_MAXIMA_RELACION=1,
-                 RECOMPENSA_EXTRA_CERRADA=0.1,
-                 RECOMPENSA_POR_RELACION=0.00001,
-                 PENALIZACION_POR_RELACIONES=1000,
-                 UMBRAL_PROPORCION=0.1,
-                 NEURONAL_FACTOR_INCREASE=0.05,
-                 FACTOR_RELACION_LIMIT=10,
                  CRECIMIENTO_X=2,
                  CRECIMIENTO_Y=2,
-                 NEURONAL_FACTOR=0.05,
-                 NEURONAS_CANTIDAD=8,
+
+                 # Red evolutiva
+                 MEJOR_RECOMPENSA=0,
+                 NEURONAS_SALIDA_CANTIDAD=8,
+                 NEURONAS_PROFUNDIDAD=16,
+                 NEURONAS_DENSIDAD_ENTRADA=12,
+                 INTERVALO_ENTRENAMIENTO=100,
+                 PORCENTAJE_POBLACION_MUTACION=0.2,
+                 RECOMPENSA_EXTRA_CERRADA=0.1,
+                 RECOMPENSA_POR_RELACION=0.00001,
+                 PENALIZACION_RELACIONES_SINFORMA=1000,
+                 UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS=0.1,
+                 VARIACION_NEURONAL_GRANDE=0.1,
+                 VARIACION_NEURONAL_PEQUEÑA=0.05,
+                 FACTOR_RELACION_LIMIT=10,
                  TASA_APRENDIZAJE=0.5,
-                 NUM_THREADS=12,
-                 MEJOR_PUNTAJE=0,
+
+                 # Configuraciones para evitar errores
                  LIMITE_INTERCAMBIO=100,
                  GENERACIONES_PARA_REINICIO=50,
                  TOLERANCIA_ENERGIA=1,
                  MEMORIA_POR_FILA=1,
-                 FILAS_POR_GB=1,
+                 FILAS_POR_GB=2,
                  ):
+        # GRID
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
         self.COLUMNAS = COLUMNAS
-        self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO
-        self.LIMITE_RELACIONAL = LIMITE_RELACIONAL
-        self.DISTANCIA_MAXIMA_RELACION = DISTANCIA_MAXIMA_RELACION
-        self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
-        self.RECOMPENSA_POR_RELACION = RECOMPENSA_POR_RELACION
-        self.PENALIZACION_POR_RELACIONES = PENALIZACION_POR_RELACIONES
-        self.NEURONAL_FACTOR_INCREASE = NEURONAL_FACTOR_INCREASE
-        self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
         self.CRECIMIENTO_X = CRECIMIENTO_X
         self.CRECIMIENTO_Y = CRECIMIENTO_Y
-        self.NEURONAL_FACTOR = NEURONAL_FACTOR
-        self.NEURONAS_CANTIDAD = NEURONAS_CANTIDAD
+
+        # Red evolutiva
+        self.MEJOR_RECOMPENSA = MEJOR_RECOMPENSA
+        self.NEURONAS_SALIDA_CANTIDAD = NEURONAS_SALIDA_CANTIDAD
+        self.NEURONAS_PROFUNDIDAD = NEURONAS_PROFUNDIDAD
+        self.NEURONAS_DENSIDAD_ENTRADA = NEURONAS_DENSIDAD_ENTRADA
+        self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO
+        self.PORCENTAJE_POBLACION_MUTACION = PORCENTAJE_POBLACION_MUTACION
+        self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
+        self.RECOMPENSA_POR_RELACION = RECOMPENSA_POR_RELACION
+        self.PENALIZACION_RELACIONES_SINFORMA = PENALIZACION_RELACIONES_SINFORMA
+        self.UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS = UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS
+        self.VARIACION_NEURONAL_GRANDE = VARIACION_NEURONAL_GRANDE
+        self.VARIACION_NEURONAL_PEQUEÑA = VARIACION_NEURONAL_PEQUEÑA
+        self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
         self.TASA_APRENDIZAJE = TASA_APRENDIZAJE
-        self.NUM_THREADS = NUM_THREADS
-        self.MEJOR_PUNTAJE = MEJOR_PUNTAJE
-        self.UMBRAL_PROPORCION = UMBRAL_PROPORCION
+
+        # Configuraciones para evitar errores
         self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO
         self.GENERACIONES_PARA_REINICIO = GENERACIONES_PARA_REINICIO
         self.TOLERANCIA_ENERGIA = TOLERANCIA_ENERGIA
@@ -114,14 +88,12 @@ class SystemRules(ISystemRules):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
 
-
 class NodoInterface:
     def __init__(self, id: str, cargas: float, energia: float):
         self.id = id
         self.cargas = cargas
         self.energia = energia
         self.relaciones = []
-
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):

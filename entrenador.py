@@ -5,7 +5,7 @@ import random
 from threading import Thread, Lock
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.initializers import RandomUniform
+from keras.initializers import RandomUniform  # type: ignore
 import json
 import numpy as np
 import cupy as cp
@@ -24,6 +24,7 @@ def contar_estructuras_cerradas(matriz_relaciones):
 class Entrenador:
     def __init__(self):
         self.mejor_recompensa = float('-inf')
+        self.ultimo_puntaje = 0
         self.generaciones_sin_mejora = 0
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
@@ -32,7 +33,7 @@ class Entrenador:
         self.cargar_mejor_puntaje()
         self.lock = Lock()
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal(
-        ) for i in range(systemRules.NEURONAS_CANTIDAD)]
+        ) for i in range(systemRules.NEURONAS_SALIDA_CANTIDAD)]
 
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.big_bang)
@@ -51,10 +52,6 @@ class Entrenador:
                 rules = json.load(file)
                 self.mejor_recompensa = rules.get(
                     "MEJOR_RECOMPENSA", float('-inf'))
-                for key, value in rules.items():
-                    if key == "NUM_THREADS":
-                        value = value[0] if isinstance(value, list) else value
-                    setattr(systemRules, key, value)
         except (FileNotFoundError, json.JSONDecodeError):
             self.guardar_mejor_puntaje()
 
@@ -94,9 +91,9 @@ class Entrenador:
 
     def crear_red_neuronal(self):
         model = Sequential([
-            Dense(12, input_dim=len(self.claves_parametros), activation='relu',
+            Dense(systemRules.NEURONAS_DENSIDAD_ENTRADA, input_dim=len(self.claves_parametros), activation='relu',
                   kernel_initializer=RandomUniform(minval=-1, maxval=1)),
-            Dense(16, activation='relu',
+            Dense(systemRules.NEURONAS_PROFUNDIDAD, activation='relu',
                   kernel_initializer=RandomUniform(minval=-1, maxval=1)),
             Dense(len(self.claves_parametros), activation='sigmoid',
                   kernel_initializer=RandomUniform(minval=-1, maxval=1))
@@ -126,7 +123,7 @@ class Entrenador:
             setattr(self.universo.physics_rules, clave, nuevos_valores[i])
 
     def mutate(self, neural_network, increase_mutation=False):
-        factor = systemRules.NEURONAL_FACTOR_INCREASE if increase_mutation else systemRules.NEURONAL_FACTOR
+        factor = systemRules.VARIACION_NEURONAL_GRANDE if increase_mutation else systemRules.VARIACION_NEURONAL_PEQUEÑA
         weights = neural_network.get_weights()
         for i in range(len(weights)):
             mutation_rate = factor * 2 if increase_mutation else factor
@@ -151,9 +148,9 @@ class Entrenador:
         proporcion_estructuras_cerradas = total_estructuras_cerradas / \
             (numeroDeRelaciones + 1e-5)
 
-        if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION:
-            penalizacion = (systemRules.UMBRAL_PROPORCION - proporcion_estructuras_cerradas) * \
-                10 * systemRules.PENALIZACION_POR_RELACIONES
+        if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS:
+            penalizacion = (systemRules.UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS - proporcion_estructuras_cerradas) * \
+                10 * systemRules.PENALIZACION_RELACIONES_SINFORMA
             recompensa -= penalizacion
 
         return recompensa
@@ -188,12 +185,12 @@ class Entrenador:
         if total_recompensa <= 0:
             for nn in self.poblacion:
                 self.mutate(nn, increase_mutation=True)
-            fraction_to_reset = 0.2
-            num_to_reset = int(len(self.poblacion) * fraction_to_reset)
+            num_to_reset = int(len(self.poblacion) *
+                               systemRules.PORCENTAJE_POBLACION_MUTACION)
             for i in range(num_to_reset):
                 self.poblacion[i] = self.crear_red_neuronal()
 
-        elif total_recompensa < systemRules.MEJOR_PUNTAJE:
+        elif total_recompensa < systemRules.MEJOR_RECOMPENSA:
             for nn in self.poblacion:
                 self.mutate(nn, increase_mutation=False)
 
@@ -203,23 +200,20 @@ class Entrenador:
 
         if total_recompensa != 0:
             self.evolve_population(recompensas)
-        print('total_recompensa', total_recompensa)
+
         if mejores_nuevos_valores is not None:
-            if total_recompensa > systemRules.MEJOR_PUNTAJE:
-                systemRules.MEJOR_PUNTAJE = total_recompensa
+            if total_recompensa > systemRules.MEJOR_RECOMPENSA:
+                systemRules.MEJOR_RECOMPENSA = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
-            if total_recompensa < systemRules.MEJOR_PUNTAJE:
+            if total_recompensa < systemRules.MEJOR_RECOMPENSA:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)
-
-        print(mejores_nuevos_valores)
+        self.ultimo_puntaje = total_recompensa
         self.poblacion[0] = best_nn
 
     def evolve_population(self, recompensas):
-        # Convertir recompensas a un array de NumPy
         recompensas_np = np.array(recompensas)
-        # Reemplazar NaN e infinitos
         recompensas_np = np.nan_to_num(
             recompensas_np, nan=0.0, posinf=0.0, neginf=0.0)
         min_recompensa = min(recompensas_np)
@@ -263,7 +257,7 @@ class Entrenador:
         self.generaciones_sin_mejora = 0
         self.mejor_recompensa = float('-inf')
         self.poblacion = [self.crear_red_neuronal()
-                          for _ in range(systemRules.NEURONAS_CANTIDAD)]
+                          for _ in range(systemRules.NEURONAS_SALIDA_CANTIDAD)]
 
     def crossover(self, parent1, parent2):
         child1 = self.crear_red_neuronal()
