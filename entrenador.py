@@ -11,14 +11,14 @@ import networkx as nx
 import numpy as np
 import cupy as cp
 
-
 def contar_estructuras_cerradas(matriz_relaciones):
     matriz_adj = (matriz_relaciones > 0).astype(cp.int32)
-    triángulos = cp.trace(cp.linalg.matrix_power(matriz_adj, 3)).item() // 6
-    círculos_4_nodos = cp.trace(
-        cp.linalg.matrix_power(matriz_adj, 4)).item() // 8
-    return triángulos, círculos_4_nodos
-
+    estructuras_cerradas = {
+        "círculos_4_nodos": cp.trace(cp.linalg.matrix_power(matriz_adj, 4)).item() // 8,
+        "cuadrados": cp.trace(cp.linalg.matrix_power(matriz_adj, 4)).item() // 24,
+        "hexágonos": cp.trace(cp.linalg.matrix_power(matriz_adj, 6)).item() // 720
+    }
+    return estructuras_cerradas
 
 class Entrenador:
     def __init__(self):
@@ -138,21 +138,19 @@ class Entrenador:
         matriz_relaciones = self.universo.matriz_relaciones
         numeroDeRelaciones = cp.sum(matriz_relaciones > 0).item()
 
-        numeroDeTriangulos, numeroDeCirculos = contar_estructuras_cerradas(
-            matriz_relaciones)
-        print('numeroDeRelaciones', numeroDeRelaciones)
-        print('numeroDeTriangulos', numeroDeTriangulos)
-        print('numeroDeCirculos', numeroDeCirculos)
+        estructuras_cerradas = contar_estructuras_cerradas(matriz_relaciones)
+        recompensa_por_relaciones = numeroDeRelaciones * systemRules.RECOMPENSA_POR_RELACION
+        recompensa = recompensa_por_relaciones
 
-        # Puedes ajustar cómo se ponderan estas estructuras en la recompensa
-        recompensa_por_relaciones = numeroDeRelaciones * \
-            systemRules.RECOMPENSA_POR_RELACION
-        recompensa = recompensa_por_relaciones + \
-            (numeroDeTriangulos * systemRules.RECOMPENSA_EXTRA_CERRADA) + \
-            (numeroDeCirculos * systemRules.RECOMPENSA_EXTRA_CERRADA * 2)
+        total_estructuras_cerradas = 0
+        multiplicador = 1
+        for idx, (estructura, cantidad) in enumerate(estructuras_cerradas.items()):
+            #print(f'{estructura}: {cantidad}')
+            total_estructuras_cerradas += cantidad
+            recompensa += cantidad * systemRules.RECOMPENSA_EXTRA_CERRADA * multiplicador
+            multiplicador += 1 # Puedes ajustar cómo cambia el multiplicador aquí
 
-        proporcion_estructuras_cerradas = (
-            numeroDeTriangulos + numeroDeCirculos) / (numeroDeRelaciones + 1e-5)
+        proporcion_estructuras_cerradas = total_estructuras_cerradas / (numeroDeRelaciones + 1e-5)
 
         if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION:
             penalizacion = (systemRules.UMBRAL_PROPORCION - proporcion_estructuras_cerradas) * \
@@ -197,7 +195,7 @@ class Entrenador:
             for i in range(num_to_reset):
                 self.poblacion[i] = self.crear_red_neuronal()
 
-        elif total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO:
+        elif total_recompensa < systemRules.MEJOR_PUNTAJE:
             for nn in self.poblacion:
                 self.mutate(nn, increase_mutation=False)
 
@@ -213,7 +211,7 @@ class Entrenador:
                 systemRules.MEJOR_PUNTAJE = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
-            if total_recompensa < systemRules.PUNTAGE_MINIMO_REINICIO:
+            if total_recompensa < systemRules.MEJOR_PUNTAJE:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)
                 self.puntaje_guardado = mejor_recompensa

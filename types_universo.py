@@ -1,6 +1,7 @@
 from typing import List
 import cupy as cp
 
+
 class IPhysicsRules:
     FILAS: int
     COLUMNAS: int
@@ -13,6 +14,7 @@ class IPhysicsRules:
     FLUCTUACION_MAXIMA: float
     PROBABILIDAD_TUNEL: float
     FACTOR_RELACION: int
+
 
 class PhysicsRules(IPhysicsRules):
     def __init__(self,
@@ -43,7 +45,6 @@ class ISystemRules:
     FILAS = int,
     COLUMNAS = int,
     INTERVALO_ENTRENAMIENTO = int
-    PUNTAGE_MINIMO_REINICIO = int
     LIMITE_RELACIONAL = int
     DISTANCIA_MAXIMA_RELACION = int
     FACTOR_RELACION_LIMIT = int
@@ -54,7 +55,7 @@ class ISystemRules:
     TASA_APRENDIZAJE = float
     NUM_THREADS = int
     MEJOR_PUNTAJE = int
-    LIMITE_INTERCAMBIO= float
+    LIMITE_INTERCAMBIO = float
 
 
 class SystemRules(ISystemRules):
@@ -63,10 +64,9 @@ class SystemRules(ISystemRules):
                  FILAS=100,
                  COLUMNAS=100,
                  INTERVALO_ENTRENAMIENTO=100,
-                 PUNTAGE_MINIMO_REINICIO=40000,
                  LIMITE_RELACIONAL=1,
                  DISTANCIA_MAXIMA_RELACION=1,
-                 RECOMPENSA_EXTRA_CERRADA=10,
+                 RECOMPENSA_EXTRA_CERRADA=0.1,
                  RECOMPENSA_POR_RELACION=0.00001,
                  PENALIZACION_POR_RELACIONES=1000,
                  UMBRAL_PROPORCION=0.1,
@@ -81,13 +81,14 @@ class SystemRules(ISystemRules):
                  MEJOR_PUNTAJE=0,
                  LIMITE_INTERCAMBIO=100,
                  GENERACIONES_PARA_REINICIO=10,
-                 TOLERANCIA_ENERGIA=1
+                 TOLERANCIA_ENERGIA=1,
+                 MEMORIA_POR_FILA=1,
+                 FILAS_POR_GB=1,
                  ):
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
         self.COLUMNAS = COLUMNAS
         self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO
-        self.PUNTAGE_MINIMO_REINICIO = PUNTAGE_MINIMO_REINICIO
         self.LIMITE_RELACIONAL = LIMITE_RELACIONAL
         self.DISTANCIA_MAXIMA_RELACION = DISTANCIA_MAXIMA_RELACION
         self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
@@ -106,6 +107,8 @@ class SystemRules(ISystemRules):
         self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO
         self.GENERACIONES_PARA_REINICIO = GENERACIONES_PARA_REINICIO
         self.TOLERANCIA_ENERGIA = TOLERANCIA_ENERGIA
+        self.MEMORIA_POR_FILA = MEMORIA_POR_FILA
+        self.FILAS_POR_GB = FILAS_POR_GB
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
@@ -118,6 +121,7 @@ class NodoInterface:
         self.cargas = cargas
         self.energia = energia
         self.relaciones = []
+
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):
