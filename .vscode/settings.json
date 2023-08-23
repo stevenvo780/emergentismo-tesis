@@ -4,6 +4,7 @@
   },
   "python.formatting.provider": "none",
   "cSpell.words": [
+    "Circulos",
     "configuracion",
     "Configuracion",
     "cytoscape",
@@ -19,13 +20,17 @@
     "MINIMO",
     "ndarray",
     "OBSERVACION",
+    "penalizacion",
+    "PENALIZACION",
     "poblacion",
+    "PROPORCION",
     "PUNTAGE",
     "relacion",
     "seleccion",
     "simulacion",
     "transicion",
     "TRANSICION",
+    "Triangulos",
     "tunel",
     "TUNEL"
   ]

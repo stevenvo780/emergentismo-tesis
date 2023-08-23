@@ -7,12 +7,23 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from keras.models import Sequential
 from keras.layers import Dense
 import json
-import time
+import networkx as nx
+import numpy as np
 import cupy as cp
+
+
+def contar_estructuras_cerradas(matriz_relaciones):
+    matriz_adj = (matriz_relaciones > 0).astype(cp.int32)
+    triángulos = cp.trace(cp.linalg.matrix_power(matriz_adj, 3)).item() // 6
+    círculos_4_nodos = cp.trace(
+        cp.linalg.matrix_power(matriz_adj, 4)).item() // 8
+    return triángulos, círculos_4_nodos
 
 
 class Entrenador:
     def __init__(self):
+        self.mejor_recompensa = float('-inf')
+        self.generaciones_sin_mejora = 0
         self.puntaje_guardado = float('-inf')
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
@@ -115,10 +126,8 @@ class Entrenador:
         factor = systemRules.NEURONAL_FACTOR_INCREASE if increase_mutation else systemRules.NEURONAL_FACTOR
         weights = neural_network.get_weights()
         for i in range(len(weights)):
-            weights[i] += np.random.normal(0, factor, weights[i].shape)
-            if np.random.rand() < 0.05:
-                weights[i] += np.random.normal(0,
-                                               factor, weights[i].shape) * 0.5
+            mutation_rate = factor * 2 if increase_mutation else factor
+            weights[i] += np.random.normal(0, mutation_rate, weights[i].shape)
         neural_network.set_weights(weights)
 
     def actualizarConfiguracion(self, intervaloEntrenamiento, tasaDeAprendizaje):
@@ -128,26 +137,28 @@ class Entrenador:
     def calcularRecompensa(self):
         matriz_relaciones = self.universo.matriz_relaciones
         numeroDeRelaciones = cp.sum(matriz_relaciones > 0).item()
-        numeroDeEstructurasCerradas = cp.sum(
-            matriz_relaciones.diagonal() > 0).item()
 
-        numeroDeRelaciones = np.array(numeroDeRelaciones)
-        numeroDeEstructurasCerradas = np.array(numeroDeEstructurasCerradas)
+        numeroDeTriangulos, numeroDeCirculos = contar_estructuras_cerradas(
+            matriz_relaciones)
+        print('numeroDeRelaciones', numeroDeRelaciones)
+        print('numeroDeTriangulos', numeroDeTriangulos)
+        print('numeroDeCirculos', numeroDeCirculos)
+
+        # Puedes ajustar cómo se ponderan estas estructuras en la recompensa
         recompensa_por_relaciones = numeroDeRelaciones * \
             systemRules.RECOMPENSA_POR_RELACION
         recompensa = recompensa_por_relaciones + \
-            (numeroDeEstructurasCerradas *
-             systemRules.RECOMPENSA_EXTRA_CERRADA)
-        proporcion_estructuras_cerradas = numeroDeEstructurasCerradas / \
-            (numeroDeRelaciones + 1e-5)
+            (numeroDeTriangulos * systemRules.RECOMPENSA_EXTRA_CERRADA) + \
+            (numeroDeCirculos * systemRules.RECOMPENSA_EXTRA_CERRADA * 2)
 
-        if numeroDeEstructurasCerradas > 0:
-            print('numeroDeEstructurasCerradas',
-                  numeroDeEstructurasCerradas)
+        proporcion_estructuras_cerradas = (
+            numeroDeTriangulos + numeroDeCirculos) / (numeroDeRelaciones + 1e-5)
+
         if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION:
             penalizacion = (systemRules.UMBRAL_PROPORCION - proporcion_estructuras_cerradas) * \
                 10 * systemRules.PENALIZACION_POR_RELACIONES
             recompensa -= penalizacion
+
         return recompensa
 
     def reiniciarUniverso(self, mejores_nuevos_valores):
@@ -211,19 +222,24 @@ class Entrenador:
         self.poblacion[0] = best_nn
 
     def evolve_population(self, recompensas):
-        # Converting recompensas to a NumPy array
-        recompensas_np = cp.asarray(recompensas).get()
+        # Convertir recompensas a un array de NumPy
+        recompensas_np = np.array(recompensas)
+        # Reemplazar NaN e infinitos
+        recompensas_np = np.nan_to_num(
+            recompensas_np, nan=0.0, posinf=0.0, neginf=0.0)
         min_recompensa = min(recompensas_np)
         adjusted_recompensas = recompensas_np - min_recompensa
         total_recompensa = sum(adjusted_recompensas)
+        epsilon = 1e-9
 
-        # Avoid division by zero if the total reward is zero
         if total_recompensa == 0:
-            probabilidades_seleccion = [
-                1.0 / len(adjusted_recompensas)] * len(adjusted_recompensas)
+            probabilidades_seleccion = np.ones(
+                len(adjusted_recompensas)) / len(adjusted_recompensas)
         else:
-            probabilidades_seleccion = [
-                rec / total_recompensa for rec in adjusted_recompensas]
+            probabilidades_seleccion = adjusted_recompensas / \
+                (total_recompensa + epsilon)
+            # Normalizar probabilidades
+            probabilidades_seleccion /= np.sum(probabilidades_seleccion)
 
         indices_seleccionados = np.random.choice(
             len(self.poblacion), size=len(self.poblacion), p=probabilidades_seleccion)
@@ -238,6 +254,21 @@ class Entrenador:
             if random.random() < self.tasaDeAprendizaje:
                 self.mutate(nn)
         self.poblacion = nueva_poblacion
+        max_recompensa = max(recompensas)
+        if max_recompensa > self.mejor_recompensa:
+            self.mejor_recompensa = max_recompensa
+            self.generaciones_sin_mejora = 0
+        else:
+            self.generaciones_sin_mejora += 1
+
+        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_REINICIO:
+            self.reiniciar_poblacion()
+
+    def reiniciar_poblacion(self):
+        self.generaciones_sin_mejora = 0
+        self.mejor_recompensa = float('-inf')
+        self.poblacion = [self.crear_red_neuronal()
+                          for _ in range(systemRules.NEURONAS_CANTIDAD)]
 
     def crossover(self, parent1, parent2):
         child1 = self.crear_red_neuronal()

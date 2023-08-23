@@ -18,7 +18,7 @@ class PhysicsRules(IPhysicsRules):
     def __init__(self,
                  PROBABILIDAD_VIDA_INICIAL=0.99999,
                  UMBRAL_CARGA=0.1,
-                 ENERGIA=0.01,
+                 ENERGIA=0.00001,
                  PROBABILIDAD_TRANSICION=0.01,
                  FLUCTUACION_MAXIMA=0.01,
                  PROBABILIDAD_TUNEL=0.01,
@@ -63,14 +63,13 @@ class SystemRules(ISystemRules):
                  FILAS=100,
                  COLUMNAS=100,
                  INTERVALO_ENTRENAMIENTO=100,
-                 PUNTAGE_MINIMO_REINICIO=20000,
-                 LIMITE_RELACIONAL=6,
+                 PUNTAGE_MINIMO_REINICIO=40000,
+                 LIMITE_RELACIONAL=1,
                  DISTANCIA_MAXIMA_RELACION=1,
-                 RECOMPENSA_EXTRA_CERRADA=10000,
-                 RECOMPENSA_POR_RELACION=0.1,
-                 PENALIZACION_POR_RELACIONES=100,
+                 RECOMPENSA_EXTRA_CERRADA=10,
+                 RECOMPENSA_POR_RELACION=0.00001,
+                 PENALIZACION_POR_RELACIONES=1000,
                  UMBRAL_PROPORCION=0.1,
-                 UMBRAL_CONJUNTOS_CERRADOS=1,
                  NEURONAL_FACTOR_INCREASE=0.05,
                  FACTOR_RELACION_LIMIT=10,
                  CRECIMIENTO_X=2,
@@ -80,7 +79,9 @@ class SystemRules(ISystemRules):
                  TASA_APRENDIZAJE=0.5,
                  NUM_THREADS=12,
                  MEJOR_PUNTAJE=0,
-                 LIMITE_INTERCAMBIO=10,
+                 LIMITE_INTERCAMBIO=100,
+                 GENERACIONES_PARA_REINICIO=10,
+                 TOLERANCIA_ENERGIA=1
                  ):
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
@@ -92,7 +93,6 @@ class SystemRules(ISystemRules):
         self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
         self.RECOMPENSA_POR_RELACION = RECOMPENSA_POR_RELACION
         self.PENALIZACION_POR_RELACIONES = PENALIZACION_POR_RELACIONES
-        self.UMBRAL_CONJUNTOS_CERRADOS = UMBRAL_CONJUNTOS_CERRADOS
         self.NEURONAL_FACTOR_INCREASE = NEURONAL_FACTOR_INCREASE
         self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
         self.CRECIMIENTO_X = CRECIMIENTO_X
@@ -104,6 +104,8 @@ class SystemRules(ISystemRules):
         self.MEJOR_PUNTAJE = MEJOR_PUNTAJE
         self.UMBRAL_PROPORCION = UMBRAL_PROPORCION
         self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO
+        self.GENERACIONES_PARA_REINICIO = GENERACIONES_PARA_REINICIO
+        self.TOLERANCIA_ENERGIA = TOLERANCIA_ENERGIA
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
