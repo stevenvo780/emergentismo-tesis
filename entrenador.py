@@ -16,17 +16,34 @@ import json
 lock_guardar = Lock()
 
 
-def contar_estructuras_cerradas(matriz_relaciones):
-    matriz_adj = (matriz_relaciones > 0).astype(cp.int32)
-    estructuras_cerradas = {
-        "círculos_4_nodos": cp.trace(cp.linalg.matrix_power(matriz_adj, 4)).item() // 8,
-        "cuadrados": cp.trace(cp.linalg.matrix_power(matriz_adj, 4)).item() // 24,
-        "hexágonos": cp.trace(cp.linalg.matrix_power(matriz_adj, 6)).item() // 720
-    }
-    return estructuras_cerradas
+def calcular_entropia_condicional(cargas: cp.ndarray, energias: cp.ndarray, matriz_distancias: cp.ndarray) -> float:
+    n = len(cargas)
+
+    # Obtener los índices de los vecinos
+    vecinos_indices = cp.where(matriz_distancias == 1)
+    cargas_vecinos = cargas[vecinos_indices[1]]
+    energias_vecinos = energias[vecinos_indices[1]]
+
+    # Define el número de bins (intervalos) para el histograma
+    num_bins = 10  # Ajusta esto según tus datos y preferencias
+
+    # Calcular las frecuencias conjuntas de cargas y energías de los vecinos
+    p_x_y, _, _ = cp.histogram2d(
+        cargas_vecinos, energias_vecinos, bins=num_bins)
+    p_x_y /= n
+    p_x = cp.sum(p_x_y, axis=1)
+    p_y = cp.sum(p_x_y, axis=0)
+
+    # Evitar la división por cero y los logaritmos de cero
+    p_x_y_safe = cp.where(p_x_y > 0, p_x_y, 1)
+    p_y_safe = cp.where(p_y > 0, p_y, 1)
+
+    entropia_condicional = -cp.sum(p_x_y * cp.log2(p_x_y_safe / p_y_safe))
+
+    return entropia_condicional.item()
 
 
-def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, matriz_relaciones):
+def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, ):
     with lock_guardar:
         with open('energiasMatriz.json', 'w') as file:
             json.dump(energiasMatriz.tolist(), file)
@@ -37,6 +54,9 @@ def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, matri
         with open('matriz_distancias.json', 'w') as file:
             json.dump(matriz_distancias.tolist(), file)
 
+
+def save_matrices_relaciones_to_json(matriz_relaciones):
+    with lock_guardar:
         with open('matriz_relaciones.json', 'w') as file:
             json.dump(matriz_relaciones.tolist(), file)
 
@@ -73,9 +93,8 @@ class Entrenador:
                 self.universo.tiempo += 1
                 if self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0 and self.universo.tiempo != 0:
                     with lock_guardar:
-                        matriz_relaciones = self.universo.obtener_relaciones()
                         thread = threading.Thread(target=save_matrices_to_json, args=(
-                            self.universo.energiasMatriz, self.universo.cargasMatriz, self.universo.matriz_distancias, matriz_relaciones))
+                            self.universo.energiasMatriz, self.universo.cargasMatriz, self.universo.matriz_distancias))
                         thread.start()
                     self.entrenar()
             else:
@@ -162,27 +181,12 @@ class Entrenador:
         neural_network.set_weights(weights)
 
     def calcularRecompensa(self):
-        matriz_relaciones = self.universo.obtener_relaciones()
-        numeroDeRelaciones = cp.sum(matriz_relaciones > 0).item()
-
-        estructuras_cerradas = contar_estructuras_cerradas(matriz_relaciones)
-        recompensa_por_relaciones = numeroDeRelaciones * \
-            systemRules.RECOMPENSA_POR_RELACION
-        recompensa = recompensa_por_relaciones
-
-        total_estructuras_cerradas = 0
-        for idx, (estructura, cantidad) in enumerate(estructuras_cerradas.items()):
-            # print(f'{estructura}: {cantidad}')
-            total_estructuras_cerradas += cantidad
-            recompensa += cantidad * systemRules.RECOMPENSA_EXTRA_CERRADA * idx
-
-        proporcion_estructuras_cerradas = total_estructuras_cerradas / \
-            (numeroDeRelaciones + 1e-5)
-
-        if proporcion_estructuras_cerradas < systemRules.UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS:
-            penalizacion = (systemRules.UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS - proporcion_estructuras_cerradas) * \
-                10 * systemRules.PENALIZACION_RELACIONES_SINFORMA
-            recompensa -= penalizacion
+        cargas = self.universo.cargasMatriz
+        energias = self.universo.energiasMatriz
+        entropia_condicional = calcular_entropia_condicional(
+            cargas, energias, self.universo.matriz_distancias)
+        print(entropia_condicional)
+        recompensa = entropia_condicional * systemRules.FACTOR_ENTROPIA
 
         return recompensa
 
@@ -237,6 +241,8 @@ class Entrenador:
                 systemRules.MEJOR_RECOMPENSA = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
+                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(self.universo.obtener_relaciones()))
+                thread.start()
             if total_recompensa < systemRules.MEJOR_RECOMPENSA:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)

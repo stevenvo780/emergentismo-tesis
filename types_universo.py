@@ -3,24 +3,21 @@ class PhysicsRules():
                  PROBABILIDAD_VIDA_INICIAL=0.99999,
                  UMBRAL_CARGA=0.1,
                  ENERGIA=0.00001,
-                 PROBABILIDAD_TRANSICION=0.01,
                  FLUCTUACION_MAXIMA=0.01,
-                 PROBABILIDAD_TUNEL=0.01,
                  FACTOR_ESTABILIDAD=0.1,
-                 PROBABILIDAD_SUPERVIVENCIA=0.5,
+                 CONSTANTE_HUBBLE=0.5,
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
         self.ENERGIA = ENERGIA
-        self.PROBABILIDAD_TRANSICION = PROBABILIDAD_TRANSICION
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
-        self.PROBABILIDAD_TUNEL = PROBABILIDAD_TUNEL
         self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
-        self.PROBABILIDAD_SUPERVIVENCIA = PROBABILIDAD_SUPERVIVENCIA
+        self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
+
 
 class SystemRules:
     def __init__(self,
@@ -37,10 +34,7 @@ class SystemRules:
                  NEURONAS_DENSIDAD_ENTRADA=12,
                  INTERVALO_ENTRENAMIENTO=2000,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
-                 RECOMPENSA_EXTRA_CERRADA=0.1,
-                 RECOMPENSA_POR_RELACION=0.00001,
-                 PENALIZACION_RELACIONES_SINFORMA=1000,
-                 UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS=0.1,
+                 FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.1,
                  VARIACION_NEURONAL_PEQUEÑA=0.05,
                  FACTOR_RELACION_LIMIT=10,
@@ -50,8 +44,9 @@ class SystemRules:
                  LIMITE_INTERCAMBIO=1,
                  GENERACIONES_PARA_REINICIO=50,
                  TOLERANCIA_ENERGIA=1,
-                 MEMORIA_POR_FILA=4,
-                 FILAS_POR_GB=1,
+                 MEMORIA_POR_FILA=1,
+                 FILAS_POR_GB=10,
+                 CONSTANTE_HUBBLE=500,
                  ):
         # GRID
         self.GIRD_SIZE = GIRD_SIZE
@@ -66,10 +61,7 @@ class SystemRules:
         self.NEURONAS_DENSIDAD_ENTRADA = NEURONAS_DENSIDAD_ENTRADA
         self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO
         self.PORCENTAJE_POBLACION_MUTACION = PORCENTAJE_POBLACION_MUTACION
-        self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
-        self.RECOMPENSA_POR_RELACION = RECOMPENSA_POR_RELACION
-        self.PENALIZACION_RELACIONES_SINFORMA = PENALIZACION_RELACIONES_SINFORMA
-        self.UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS = UMBRAL_PROPORCION_ESTRUCUTRAS_CERRADAS
+        self.FACTOR_ENTROPIA = FACTOR_ENTROPIA
         self.VARIACION_NEURONAL_GRANDE = VARIACION_NEURONAL_GRANDE
         self.VARIACION_NEURONAL_PEQUEÑA = VARIACION_NEURONAL_PEQUEÑA
         self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
@@ -81,10 +73,12 @@ class SystemRules:
         self.TOLERANCIA_ENERGIA = TOLERANCIA_ENERGIA
         self.MEMORIA_POR_FILA = MEMORIA_POR_FILA
         self.FILAS_POR_GB = FILAS_POR_GB
+        self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
+
 
 class NodoInterface:
     def __init__(self, id: str, cargas: float, energia: float):
@@ -92,6 +86,7 @@ class NodoInterface:
         self.cargas = cargas
         self.energia = energia
         self.relaciones = []
+
 
 class Relacion:
     def __init__(self, nodoId: str, cargaCompartida: float):

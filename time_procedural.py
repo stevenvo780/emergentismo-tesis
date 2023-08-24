@@ -2,14 +2,16 @@ from typing import List
 from types_universo import PhysicsRules, systemRules, NodoInterface
 import cupy as cp
 
+
 def calcular_cargas(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
     vecinos_vivos = cp.sum(matriz_distancias == 1, axis=1)
     # Usar una probabilidad que dependa del número de vecinos vivos para el nacimiento
     nacimiento = (cargas == 0) & (cp.random.rand(len(cargas)) <
                                   physics_rules.PROBABILIDAD_VIDA_INICIAL * vecinos_vivos)
+
     # Usar una función logística para la supervivencia
     supervivencia = (cargas != 0) & (cp.random.rand(len(cargas)) < 1 / (1 +
-                                                                        cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - physics_rules.PROBABILIDAD_SUPERVIVENCIA))))
+                                                                        cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - physics_rules.CONSTANTE_HUBBLE))))
     muerte = ~nacimiento & ~supervivencia
     cargas_nuevas = cargas.copy()
     cargas_nuevas[nacimiento] = cp.random.uniform(

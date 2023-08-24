@@ -32,8 +32,9 @@ class Universo:
                 self.nodos.append(nodo)
         self.cargasMatriz = cp.array(
             [nodo.cargas for nodo in self.nodos], dtype=cp.float16)
-        self.energiasMatriz = calcular_energia(cp.ones_like(self.cargasMatriz), self.cargasMatriz, self.physics_rules)
-        self.state = True
+        self.energiasMatriz = calcular_energia(cp.ones_like(
+            self.cargasMatriz), self.cargasMatriz, self.physics_rules)
+
         self.matriz_distancias = calcular_distancias_matricial(self.nodos)
 
     def obtener_relaciones(self):
@@ -41,7 +42,10 @@ class Universo:
 
     def next(self):
         self.cargasMatriz, self.energiasMatriz = next_step(self)
-        if self.tiempo % 100 == 0:
-            # expandir_espacio(self.nodos)
+        if self.tiempo % systemRules.CONSTANTE_HUBBLE == 0:
+            expandir_espacio(self.nodos)
+            self.matriz_distancias = calcular_distancias_matricial(self.nodos)
             self.cargasMatriz = cp.array(
                 [nodo.cargas for nodo in self.nodos], dtype=cp.float16)
+            self.energiasMatriz = calcular_energia(cp.ones_like(
+                self.cargasMatriz), self.cargasMatriz, self.physics_rules)

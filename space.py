@@ -31,7 +31,7 @@ def obtener_memoria_disponible():
         result = subprocess.run(['nvidia-smi', '--query-gpu=memory.free',
                                 '--format=csv,noheader,nounits'], stdout=subprocess.PIPE)
         memoria_disponible = int(result.stdout.decode('utf-8').strip())
-        return memoria_disponible * 1024 * 1024  # Convertir a bytes
+        return memoria_disponible  # Convertir a bytes
     except Exception as e:
         print("Error al obtener la memoria disponible de la GPU:", e)
         return 0
@@ -41,7 +41,7 @@ def expandir_espacio(nodos: List[NodoInterface]) -> List[NodoInterface]:
     memoria_disponible = obtener_memoria_disponible()
     crecimiento_permitido = int(
         memoria_disponible // systemRules.MEMORIA_POR_FILA * systemRules.FILAS_POR_GB)
-
+    print(crecimiento_permitido)
     crecimiento_x = min(systemRules.CRECIMIENTO_X, crecimiento_permitido)
     crecimiento_y = min(systemRules.CRECIMIENTO_Y, crecimiento_permitido)
 
