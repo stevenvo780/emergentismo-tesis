@@ -2,6 +2,7 @@ import pygame
 from entrenador import Entrenador
 from types_universo import systemRules
 import cupy as cp
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 pygame.init()
 
@@ -10,6 +11,17 @@ class ConfigWindow:
     def __init__(self, entrenador, screen):
         self.entrenador = entrenador
         self.screen = screen
+        self.button_color = (50, 200, 50)
+        self.text_color = (255, 255, 255)
+        self.button_font = pygame.font.Font(None, 36)
+        # Puedes ajustar la posición y tamaño del botón
+        self.button_rect = pygame.Rect(300, 10, 100, 50)
+        self.paused = False
+        self.update_button()
+
+    def update_button(self):
+        self.button_label = self.button_font.render(
+            "Pausar" if not self.paused else "Reanudar", True, self.text_color)
 
     def update_screen(self, screen):
         self.screen = screen
@@ -44,6 +56,11 @@ class ConfigWindow:
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(label, (6, (560 + i * 18)))
+
+        # Dibujar el botón de pausa/reanudación
+        pygame.draw.rect(self.screen, self.button_color, self.button_rect)
+        self.screen.blit(self.button_label,
+                         (self.button_rect.x + 10, self.button_rect.y + 10))
 
     def update_configurations(self):
         for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physics_rules).items()):
@@ -87,6 +104,15 @@ class App:
         dragging = False
         while running:
             for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.config_window.button_rect.collidepoint((mouse_pos[0], mouse_pos[1])):
+                        self.config_window.paused = not self.config_window.paused
+                        self.config_window.update_button()
+                        if self.config_window.paused:
+                            self.entrenador.pausarEntrenamiento()
+                        else:
+                            self.entrenador.reanudarEntrenamiento()
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -136,7 +162,7 @@ class App:
                              (self.config_screen.get_width(), 0))
             pygame.display.flip()
             # Reducir el delay para un movimiento más suave
-            pygame.time.delay(50)
+            pygame.time.delay(100)
 
         pygame.quit()
 
@@ -149,9 +175,6 @@ class App:
         # Convertir cargas y energías a valores entre 0 y 255
         cargas = ((cargas + 1) / 2 * 255).astype(int)
         energias = ((energias + 100) / 200 * 255).astype(int)
-        #relaciones = cp.asnumpy(self.entrenador.universo.matriz_relaciones)
-        #print(type(relaciones))
-        # Asegurar que los valores estén en el rango correcto
         cargas = np.clip(cargas, 0, 255)
         energias = np.clip(energias, 0, 255)
 
@@ -163,8 +186,9 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            color = (carga, energia, energia)
-            pygame.draw.rect(self.universe_screen, color, (x, y, cellSize, cellSize))
+            color = (carga, carga, energia)
+            pygame.draw.rect(self.universe_screen, color,
+                             (x, y, cellSize, cellSize))
 
 
 if __name__ == '__main__':

@@ -24,7 +24,8 @@ class Universo:
         self.energiasMatriz: cp.ndarray
         self.cargasMatriz: cp.ndarray
         self.matriz_distancias: cp.ndarray
-        self.matriz_relaciones: cp.ndarray = cp.zeros_like(self.matriz_distancias)
+        self.matriz_relaciones: cp.ndarray = cp.zeros_like(
+            self.matriz_distancias)
         self.lock = Lock()
 
     def determinacionesDelSistema(self):
@@ -57,7 +58,7 @@ class Universo:
         self.cargasMatriz, self.energiasMatriz, self.matriz_relaciones = next_step(
             self)
         if self.tiempo % 100 == 0:
-            expandir_espacio(self.nodos)
+            # expandir_espacio(self.nodos)
             self.energiasMatriz = cp.array(
                 [nodo.energia for nodo in self.nodos], dtype=cp.float16)
             self.cargasMatriz = cp.array(

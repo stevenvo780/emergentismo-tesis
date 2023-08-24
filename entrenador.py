@@ -9,6 +9,11 @@ from keras.initializers import RandomUniform  # type: ignore
 import json
 import numpy as np
 import cupy as cp
+import time
+import threading
+import json
+
+lock_guardar = Lock()
 
 
 def contar_estructuras_cerradas(matriz_relaciones):
@@ -19,6 +24,21 @@ def contar_estructuras_cerradas(matriz_relaciones):
         "hexágonos": cp.trace(cp.linalg.matrix_power(matriz_adj, 6)).item() // 720
     }
     return estructuras_cerradas
+
+
+def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, matriz_relaciones):
+    with lock_guardar:
+        with open('energiasMatriz.json', 'w') as file:
+            json.dump(energiasMatriz.tolist(), file)
+
+        with open('cargasMatriz.json', 'w') as file:
+            json.dump(cargasMatriz.tolist(), file)
+
+        with open('matriz_distancias.json', 'w') as file:
+            json.dump(matriz_distancias.tolist(), file)
+
+        with open('matriz_relaciones.json', 'w') as file:
+            json.dump(matriz_relaciones.tolist(), file)
 
 
 class Entrenador:
@@ -34,17 +54,31 @@ class Entrenador:
         self.lock = Lock()
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal(
         ) for i in range(systemRules.NEURONAS_SALIDA_CANTIDAD)]
+        self.pausado = False
 
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.big_bang)
         self.entrenamiento_thread.start()
 
+    def pausarEntrenamiento(self):
+        self.pausado = True
+
+    def reanudarEntrenamiento(self):
+        self.pausado = False
+
     def big_bang(self):
         while True:
-            self.universo.next()
-            self.universo.tiempo += 1
-            if self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0 and self.universo.tiempo != 0:
-                self.entrenar()
+            if not self.pausado:
+                self.universo.next()
+                self.universo.tiempo += 1
+                if self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0 and self.universo.tiempo != 0:
+                    with lock_guardar:
+                        thread = threading.Thread(target=save_matrices_to_json, args=(
+                            self.universo.energiasMatriz, self.universo.cargasMatriz, self.universo.matriz_distancias, self.universo.matriz_relaciones))
+                        thread.start()
+                    self.entrenar()
+            else:
+                time.sleep(1)
 
     def cargar_mejor_puntaje(self):
         try:

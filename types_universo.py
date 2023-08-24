@@ -36,7 +36,7 @@ class SystemRules:
                  NEURONAS_SALIDA_CANTIDAD=8,
                  NEURONAS_PROFUNDIDAD=16,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=100,
+                 INTERVALO_ENTRENAMIENTO=200,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
                  RECOMPENSA_EXTRA_CERRADA=0.1,
                  RECOMPENSA_POR_RELACION=0.00001,
@@ -51,8 +51,8 @@ class SystemRules:
                  LIMITE_INTERCAMBIO=100,
                  GENERACIONES_PARA_REINICIO=50,
                  TOLERANCIA_ENERGIA=1,
-                 MEMORIA_POR_FILA=1,
-                 FILAS_POR_GB=2,
+                 MEMORIA_POR_FILA=4,
+                 FILAS_POR_GB=1,
                  ):
         # GRID
         self.GIRD_SIZE = GIRD_SIZE
