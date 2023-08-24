@@ -6,8 +6,8 @@ class PhysicsRules():
                  PROBABILIDAD_TRANSICION=0.01,
                  FLUCTUACION_MAXIMA=0.01,
                  PROBABILIDAD_TUNEL=0.01,
-                 FACTOR_ESTABILIDAD=0.2,
-                 FACTOR_RELACION=10,
+                 FACTOR_ESTABILIDAD=0.1,
+                 PROBABILIDAD_SUPERVIVENCIA=0.5,
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
@@ -16,7 +16,7 @@ class PhysicsRules():
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
         self.PROBABILIDAD_TUNEL = PROBABILIDAD_TUNEL
         self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
-        self.FACTOR_RELACION = FACTOR_RELACION
+        self.PROBABILIDAD_SUPERVIVENCIA = PROBABILIDAD_SUPERVIVENCIA
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
@@ -33,10 +33,9 @@ class SystemRules:
 
                  # Red evolutiva
                  MEJOR_RECOMPENSA=0,
-                 NEURONAS_SALIDA_CANTIDAD=8,
                  NEURONAS_PROFUNDIDAD=16,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=200,
+                 INTERVALO_ENTRENAMIENTO=2000,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
                  RECOMPENSA_EXTRA_CERRADA=0.1,
                  RECOMPENSA_POR_RELACION=0.00001,
@@ -48,7 +47,7 @@ class SystemRules:
                  TASA_APRENDIZAJE=0.5,
 
                  # Configuraciones para evitar errores
-                 LIMITE_INTERCAMBIO=100,
+                 LIMITE_INTERCAMBIO=1,
                  GENERACIONES_PARA_REINICIO=50,
                  TOLERANCIA_ENERGIA=1,
                  MEMORIA_POR_FILA=4,
@@ -63,7 +62,6 @@ class SystemRules:
 
         # Red evolutiva
         self.MEJOR_RECOMPENSA = MEJOR_RECOMPENSA
-        self.NEURONAS_SALIDA_CANTIDAD = NEURONAS_SALIDA_CANTIDAD
         self.NEURONAS_PROFUNDIDAD = NEURONAS_PROFUNDIDAD
         self.NEURONAS_DENSIDAD_ENTRADA = NEURONAS_DENSIDAD_ENTRADA
         self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO

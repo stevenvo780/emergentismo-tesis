@@ -1,5 +1,5 @@
 from types_universo import NodoInterface, systemRules
-from time_procedural import calcular_energia_matricial, calcular_cargas, relacionar_nodos_matricial
+from time_procedural import calcular_cargas, calcular_energia
 from random import uniform
 from typing import List
 import cupy as cp
@@ -9,23 +9,13 @@ import subprocess
 def next_step(universo):
     matriz_distancias = universo.matriz_distancias
 
-    stream1 = cp.cuda.Stream()
-    stream2 = cp.cuda.Stream()
-    stream3 = cp.cuda.Stream()
+    with cp.cuda.Stream():
+        cargas_nuevas = calcular_cargas(universo.cargasMatriz, matriz_distancias, universo.physics_rules)
 
-    with stream1:
-        matriz_relaciones = relacionar_nodos_matricial(
-            universo.physics_rules, universo.energiasMatriz, universo.cargasMatriz, matriz_distancias)
+    with cp.cuda.Stream():
+        energias = calcular_energia(universo.energiasMatriz, cargas_nuevas, universo.physics_rules)
 
-    with stream2:
-        cargas_nuevas = calcular_cargas(
-            universo.cargasMatriz, matriz_relaciones, universo.physics_rules)
-
-    with stream3:
-        energias = calcular_energia_matricial(
-            universo.energiasMatriz, matriz_relaciones)
-
-    return cargas_nuevas, energias, matriz_relaciones
+    return cargas_nuevas, energias
 
 
 def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:

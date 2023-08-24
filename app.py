@@ -1,3 +1,4 @@
+import time
 import pygame
 from entrenador import Entrenador
 from types_universo import systemRules
@@ -172,11 +173,13 @@ class App:
         cargas = cp.asnumpy(self.entrenador.universo.cargasMatriz)
         energias = cp.asnumpy(self.entrenador.universo.energiasMatriz)
 
-        # Convertir cargas y energías a valores entre 0 y 255
-        cargas = ((cargas + 1) / 2 * 255).astype(int)
-        energias = ((energias + 100) / 200 * 255).astype(int)
-        cargas = np.clip(cargas, 0, 255)
-        energias = np.clip(energias, 0, 255)
+        # Ajustar las cargas y energías al rango 0-255
+        min_carga, max_carga = np.min(cargas), np.max(cargas)
+        min_energia, max_energia = np.min(energias), np.max(energias)
+        cargas = ((cargas - min_carga) / (max_carga - min_carga)
+                  * 255).astype(np.uint8)
+        energias = ((energias - min_energia) /
+                    (max_energia - min_energia) * 255).astype(np.uint8)
 
         for index, (carga, energia) in enumerate(zip(cargas.flat, energias.flat)):
             cellSize = self.cellSize * self.zoom_level
@@ -186,7 +189,7 @@ class App:
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            color = (carga, carga, energia)
+            color = (energia, carga, carga)
             pygame.draw.rect(self.universe_screen, color,
                              (x, y, cellSize, cellSize))
 

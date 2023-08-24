@@ -53,7 +53,7 @@ class Entrenador:
         self.cargar_mejor_puntaje()
         self.lock = Lock()
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal(
-        ) for i in range(systemRules.NEURONAS_SALIDA_CANTIDAD)]
+        ) for i in range(len(self.claves_parametros))]
         self.pausado = False
 
     def iniciarEntrenamiento(self):
@@ -73,8 +73,9 @@ class Entrenador:
                 self.universo.tiempo += 1
                 if self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0 and self.universo.tiempo != 0:
                     with lock_guardar:
+                        matriz_relaciones = self.universo.obtener_relaciones()
                         thread = threading.Thread(target=save_matrices_to_json, args=(
-                            self.universo.energiasMatriz, self.universo.cargasMatriz, self.universo.matriz_distancias, self.universo.matriz_relaciones))
+                            self.universo.energiasMatriz, self.universo.cargasMatriz, self.universo.matriz_distancias, matriz_relaciones))
                         thread.start()
                     self.entrenar()
             else:
@@ -145,11 +146,7 @@ class Entrenador:
 
     def transformar_valores(self, nuevos_valores):
         for i, clave in enumerate(self.claves_parametros):
-            if clave == 'FACTOR_RELACION':
-                nuevos_valores[i] = int(
-                    nuevos_valores[i] * systemRules.FACTOR_RELACION_LIMIT)
-            else:
-                nuevos_valores[i] = max(0, nuevos_valores[i])
+            nuevos_valores[i] = max(0, nuevos_valores[i])
         return nuevos_valores
 
     def aplicar_nuevos_valores(self, nuevos_valores):
@@ -165,7 +162,7 @@ class Entrenador:
         neural_network.set_weights(weights)
 
     def calcularRecompensa(self):
-        matriz_relaciones = self.universo.matriz_relaciones
+        matriz_relaciones = self.universo.obtener_relaciones()
         numeroDeRelaciones = cp.sum(matriz_relaciones > 0).item()
 
         estructuras_cerradas = contar_estructuras_cerradas(matriz_relaciones)
@@ -291,7 +288,7 @@ class Entrenador:
         self.generaciones_sin_mejora = 0
         self.mejor_recompensa = float('-inf')
         self.poblacion = [self.crear_red_neuronal()
-                          for _ in range(systemRules.NEURONAS_SALIDA_CANTIDAD)]
+                          for _ in range(len(self.claves_parametros))]
 
     def crossover(self, parent1, parent2):
         child1 = self.crear_red_neuronal()
