@@ -39,10 +39,8 @@ def obtener_memoria_disponible():
 
 def expandir_espacio(nodos: List[NodoInterface]) -> List[NodoInterface]:
     memoria_disponible = obtener_memoria_disponible()
-    print(memoria_disponible);
     crecimiento_permitido = int(
         memoria_disponible // systemRules.MEMORIA_POR_FILA * systemRules.FILAS_POR_MB)
-    print(crecimiento_permitido);
     crecimiento_x = min(systemRules.CRECIMIENTO_X, crecimiento_permitido)
     crecimiento_y = min(systemRules.CRECIMIENTO_Y, crecimiento_permitido)
 
