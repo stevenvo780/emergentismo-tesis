@@ -2,6 +2,7 @@ import pygame
 from entrenador import Entrenador
 from types_universo import systemRules
 import cupy as cp
+import numpy as np
 pygame.init()
 
 
@@ -16,7 +17,7 @@ class ConfigWindow:
     def run(self):
         self.update_configurations()
 
-    def refresh(self, entrenador):
+    def refresh(self, entrenador: Entrenador):
         self.entrenador = entrenador
         self.screen.fill((255, 255, 255))  # Fondo blanco
         physics_rules = vars(self.entrenador.universo.physics_rules).items()
@@ -24,18 +25,21 @@ class ConfigWindow:
         self.font = pygame.font.Font(None, 20)
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
-        time_structure_label = self.font.render(
+        ultimo_puntaje = self.font.render(
+            f"Mejor recompensa: {self.entrenador.ultimo_puntaje}", True, (0, 0, 0))
+        mejor_recompensa = self.font.render(
             f"Mejor recompensa: {self.entrenador.mejor_recompensa}", True, (0, 0, 0))
-        fail_time = self.font.render(
+        generaciones_sin_mejora = self.font.render(
             f"Tiempo sin mejora: {self.entrenador.generaciones_sin_mejora}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
-        self.screen.blit(time_structure_label, (10, 35))
-        self.screen.blit(fail_time, (10, 55))
+        self.screen.blit(ultimo_puntaje, (10, 35))
+        self.screen.blit(mejor_recompensa, (10, 55))
+        self.screen.blit(generaciones_sin_mejora, (10, 75))
         self.font = pygame.font.Font(None, 18)
         for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (6, 80 + i * 18))
+            self.screen.blit(label, (6, 100 + i * 18))
 
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
@@ -137,37 +141,30 @@ class App:
         pygame.quit()
 
     def update_grid(self):
-        self.universe_screen.fill((0, 0, 0))   # Limpiar la pantalla
+        self.universe_screen.fill((0, 0, 0))
 
         cargas = cp.asnumpy(self.entrenador.universo.cargasMatriz)
         energias = cp.asnumpy(self.entrenador.universo.energiasMatriz)
 
-        for index, (carga, energia) in enumerate(zip(cargas, energias)):
+        # Convertir cargas y energías a valores entre 0 y 255
+        cargas = ((cargas + 1) / 2 * 255).astype(int)
+        energias = ((energias + 100) / 200 * 255).astype(int)
+        #relaciones = cp.asnumpy(self.entrenador.universo.matriz_relaciones)
+        #print(type(relaciones))
+        # Asegurar que los valores estén en el rango correcto
+        cargas = np.clip(cargas, 0, 255)
+        energias = np.clip(energias, 0, 255)
+
+        for index, (carga, energia) in enumerate(zip(cargas.flat, energias.flat)):
             cellSize = self.cellSize * self.zoom_level
             x = (index % self.gridSize) * cellSize - self.view_offset[0]
             y = (index // self.gridSize) * cellSize - self.view_offset[1]
 
-            # Continuar con el siguiente nodo si está fuera de la ventana de visualización
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if energia > self.entrenador.universo.physics_rules.ENERGIA and carga > systemRules.LIMITE_RELACIONAL:
-                color = (255, 255, 0)
-            else:
-                if carga > 0:
-                    blueComponent = max(0, min(255, int(255 * carga)))
-                    color = (0, 200, blueComponent)
-                else:
-                    cargas_value = abs(carga)
-                    if cargas_value != float('inf'):
-                        greyComponent = max(
-                            0, min(255, 200 - int(255 * cargas_value)))
-                        color = (greyComponent, greyComponent, greyComponent)
-                    else:
-                        color = (0, 0, 0)
-
-            pygame.draw.rect(self.universe_screen, color,
-                             (x, y, cellSize, cellSize))
+            color = (carga, energia, energia)
+            pygame.draw.rect(self.universe_screen, color, (x, y, cellSize, cellSize))
 
 
 if __name__ == '__main__':
