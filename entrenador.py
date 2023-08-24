@@ -185,7 +185,6 @@ class Entrenador:
         energias = self.universo.energiasMatriz
         entropia_condicional = calcular_entropia_condicional(
             cargas, energias, self.universo.matriz_distancias)
-        print(entropia_condicional)
         recompensa = entropia_condicional * systemRules.FACTOR_ENTROPIA
 
         return recompensa
@@ -241,7 +240,7 @@ class Entrenador:
                 systemRules.MEJOR_RECOMPENSA = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
-                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(self.universo.obtener_relaciones()))
+                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(self.universo.obtener_relaciones(),))
                 thread.start()
             if total_recompensa < systemRules.MEJOR_RECOMPENSA:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)

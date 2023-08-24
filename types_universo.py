@@ -44,8 +44,8 @@ class SystemRules:
                  LIMITE_INTERCAMBIO=1,
                  GENERACIONES_PARA_REINICIO=50,
                  TOLERANCIA_ENERGIA=1,
-                 MEMORIA_POR_FILA=1,
-                 FILAS_POR_GB=10,
+                 MEMORIA_POR_FILA=2048,
+                 FILAS_POR_MB=10,
                  CONSTANTE_HUBBLE=500,
                  ):
         # GRID
@@ -72,7 +72,7 @@ class SystemRules:
         self.GENERACIONES_PARA_REINICIO = GENERACIONES_PARA_REINICIO
         self.TOLERANCIA_ENERGIA = TOLERANCIA_ENERGIA
         self.MEMORIA_POR_FILA = MEMORIA_POR_FILA
-        self.FILAS_POR_GB = FILAS_POR_GB
+        self.FILAS_POR_MB = FILAS_POR_MB
         self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
 
     def __str__(self):
