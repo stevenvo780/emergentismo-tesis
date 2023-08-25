@@ -22,7 +22,7 @@ with cupy.cuda.Device(0):
 
         with cp.cuda.Stream():
             cargas_nuevas = calcular_cargas(
-                universo.cargasMatriz, matriz_distancias, universo)
+                universo.cargasMatriz, matriz_distancias, universo.physics_rules)
 
         with cp.cuda.Stream():
             energias = calcular_energia(
