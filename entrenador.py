@@ -1,6 +1,7 @@
 import numpy as np
 from universo import Universo
 from types_universo import PhysicsRules, systemRules
+from time_procedural import calcular_entropia_condicional
 import random
 from threading import Thread, Lock
 from keras.models import Sequential
@@ -14,33 +15,6 @@ import threading
 import json
 
 lock_guardar = Lock()
-
-
-def calcular_entropia_condicional(cargas: cp.ndarray, energias: cp.ndarray, matriz_distancias: cp.ndarray) -> float:
-    n = len(cargas)
-
-    # Obtener los índices de los vecinos
-    vecinos_indices = cp.where(matriz_distancias == 1)
-    cargas_vecinos = cargas[vecinos_indices[1]]
-    energias_vecinos = energias[vecinos_indices[1]]
-
-    # Define el número de bins (intervalos) para el histograma
-    num_bins = 10  # Ajusta esto según tus datos y preferencias
-
-    # Calcular las frecuencias conjuntas de cargas y energías de los vecinos
-    p_x_y, _, _ = cp.histogram2d(
-        cargas_vecinos, energias_vecinos, bins=num_bins)
-    p_x_y /= n
-    p_x = cp.sum(p_x_y, axis=1)
-    p_y = cp.sum(p_x_y, axis=0)
-
-    # Evitar la división por cero y los logaritmos de cero
-    p_x_y_safe = cp.where(p_x_y > 0, p_x_y, 1)
-    p_y_safe = cp.where(p_y > 0, p_y, 1)
-
-    entropia_condicional = -cp.sum(p_x_y * cp.log2(p_x_y_safe / p_y_safe))
-
-    return entropia_condicional.item()
 
 
 def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, ):
@@ -157,7 +131,7 @@ class Entrenador:
 
     def calcular_nuevos_valores(self, neural_network):
         input_data = np.array([getattr(self.universo.physics_rules, key)
-                              for key in self.claves_parametros], dtype=float)
+                               for key in self.claves_parametros], dtype=float)
         nuevos_valores = neural_network.predict(
             input_data.reshape(1, -1)).flatten()
         self.transformar_valores(nuevos_valores)
@@ -177,7 +151,8 @@ class Entrenador:
         weights = neural_network.get_weights()
         for i in range(len(weights)):
             mutation_rate = factor * 2 if increase_mutation else factor
-            weights[i] += np.random.normal(0, mutation_rate, weights[i].shape)
+            weights[i] += np.random.normal(0,
+                                           mutation_rate, weights[i].shape)
         neural_network.set_weights(weights)
 
     def calcularRecompensa(self):
@@ -240,7 +215,8 @@ class Entrenador:
                 systemRules.MEJOR_RECOMPENSA = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
-                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(self.universo.obtener_relaciones(),))
+                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(
+                    self.universo.obtener_relaciones(),))
                 thread.start()
             if total_recompensa < systemRules.MEJOR_RECOMPENSA:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
@@ -303,7 +279,8 @@ class Entrenador:
             if np.prod(shape) <= 2:
                 continue
             punto_cruce1 = random.randint(1, np.prod(shape) - 3)
-            punto_cruce2 = random.randint(punto_cruce1 + 1, np.prod(shape) - 2)
+            punto_cruce2 = random.randint(
+                punto_cruce1 + 1, np.prod(shape) - 2)
             weights1 = np.concatenate((parent1.get_weights()[i].flatten()[:punto_cruce1],
                                        parent2.get_weights()[i].flatten()[
                 punto_cruce1:punto_cruce2],

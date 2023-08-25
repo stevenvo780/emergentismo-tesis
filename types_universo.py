@@ -6,6 +6,8 @@ class PhysicsRules():
                  FLUCTUACION_MAXIMA=0.01,
                  FACTOR_ESTABILIDAD=0.1,
                  CONSTANTE_HUBBLE=0.5,
+                 LONGITUD_DE_DECAY=0.5,
+                 RUIDO_MAXIMO=0.1,
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
@@ -13,6 +15,8 @@ class PhysicsRules():
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
         self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
         self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
+        self.LONGITUD_DE_DECAY = LONGITUD_DE_DECAY
+        self.RUIDO_MAXIMO = RUIDO_MAXIMO
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
@@ -32,7 +36,7 @@ class SystemRules:
                  MEJOR_RECOMPENSA=0,
                  NEURONAS_PROFUNDIDAD=16,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=2000,
+                 INTERVALO_ENTRENAMIENTO=500,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
                  FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.1,
@@ -42,11 +46,11 @@ class SystemRules:
 
                  # Configuraciones para evitar errores
                  LIMITE_INTERCAMBIO=1,
-                 GENERACIONES_PARA_REINICIO=50,
+                 GENERACIONES_PARA_REINICIO=10,
                  TOLERANCIA_ENERGIA=1,
-                 MEMORIA_POR_FILA=2048,
-                 FILAS_POR_MB=10,
-                 CONSTANTE_HUBBLE=500,
+                 MEMORIA_POR_FILA=1024,
+                 FILAS_POR_MB=50,
+                 CONSTANTE_HUBBLE=100,
                  ):
         # GRID
         self.GIRD_SIZE = GIRD_SIZE
