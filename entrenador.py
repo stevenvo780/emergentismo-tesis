@@ -240,8 +240,8 @@ class Entrenador:
                 systemRules.MEJOR_RECOMPENSA = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
-                # thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(self.universo.obtener_relaciones(),))
-                # thread.start()
+                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(self.universo.obtener_relaciones(),))
+                thread.start()
             if total_recompensa < systemRules.MEJOR_RECOMPENSA:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)

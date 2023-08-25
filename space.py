@@ -12,7 +12,7 @@ cp.cuda.set_allocator(pool.malloc)
 mempool = cupy.get_default_memory_pool()
 
 # Establecer el límite de memoria fuera del bloque with
-mempool.set_limit(size=16*1024**3) 
+mempool.set_limit(size=16*1024**3)
 
 with cupy.cuda.Device(0):
     # No es necesario establecer el límite de memoria aquí
@@ -22,7 +22,7 @@ with cupy.cuda.Device(0):
 
         with cp.cuda.Stream():
             cargas_nuevas = calcular_cargas(
-                universo.cargasMatriz, matriz_distancias, universo.physics_rules)
+                universo.cargasMatriz, matriz_distancias, universo)
 
         with cp.cuda.Stream():
             energias = calcular_energia(

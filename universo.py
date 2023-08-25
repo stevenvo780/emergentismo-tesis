@@ -43,7 +43,7 @@ class Universo:
     def next(self):
         self.cargasMatriz, self.energiasMatriz = next_step(self)
         if self.tiempo % systemRules.CONSTANTE_HUBBLE == 0:
-            #expandir_espacio(self.nodos)
+            expandir_espacio(self.nodos)
             self.matriz_distancias = calcular_distancias_matricial(self.nodos)
             self.cargasMatriz = cp.array(
                 [nodo.cargas for nodo in self.nodos], dtype=cp.float16)

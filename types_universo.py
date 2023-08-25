@@ -6,7 +6,6 @@ class PhysicsRules():
                  FLUCTUACION_MAXIMA=0.01,
                  FACTOR_ESTABILIDAD=0.1,
                  CONSTANTE_HUBBLE=0.5,
-                 CONSTANTE_COULOMB=0.5,
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
@@ -14,7 +13,6 @@ class PhysicsRules():
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
         self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
         self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
-        self.CONSTANTE_COULOMB = CONSTANTE_COULOMB
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
