@@ -137,9 +137,9 @@ def load_relaciones(start_row=0, start_col=0):
             physics_rules = PhysicsRules(**physics_rules_data)  # Asegúrate de adaptar esto a la estructura de tus datos
 
         # Cargar cargas y energías desde sus archivos
-        with open('cargas.json', 'r') as file:
+        with open('cargasMatriz.json', 'r') as file:
             cargas = cp.array(json.load(file))
-        with open('energias.json', 'r') as file:
+        with open('energiasMatriz.json', 'r') as file:
             energias = cp.array(json.load(file))
 
         # Construir los nodos a partir de las cargas y energías
