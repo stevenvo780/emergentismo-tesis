@@ -28,6 +28,8 @@
     "MOUSEBUTTONUP",
     "MOUSEMOTION",
     "ndarray",
+    "noheader",
+    "nvidia",
     "OBSERVACION",
     "penalizacion",
     "PENALIZACION",

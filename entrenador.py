@@ -25,14 +25,6 @@ def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, ):
         with open('cargasMatriz.json', 'w') as file:
             json.dump(cargasMatriz.tolist(), file)
 
-        with open('matriz_distancias.json', 'w') as file:
-            json.dump(matriz_distancias.tolist(), file)
-
-
-def save_matrices_relaciones_to_json(matriz_relaciones):
-    with lock_guardar:
-        with open('matriz_relaciones.json', 'w') as file:
-            json.dump(matriz_relaciones.tolist(), file)
 
 
 class Entrenador:
@@ -215,9 +207,6 @@ class Entrenador:
                 systemRules.MEJOR_RECOMPENSA = total_recompensa
                 self.guardar_mejor_universo(mejores_nuevos_valores)
                 self.guardar_mejor_puntaje()
-                thread = threading.Thread(target=save_matrices_relaciones_to_json, args=(
-                    self.universo.obtener_relaciones(),))
-                thread.start()
             if total_recompensa < systemRules.MEJOR_RECOMPENSA:
                 self.aplicar_nuevos_valores(mejores_nuevos_valores)
                 self.reiniciarUniverso(mejores_nuevos_valores)

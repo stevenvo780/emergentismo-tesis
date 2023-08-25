@@ -48,8 +48,8 @@ class SystemRules:
                  LIMITE_INTERCAMBIO=1,
                  GENERACIONES_PARA_REINICIO=10,
                  TOLERANCIA_ENERGIA=1,
-                 MEMORIA_POR_FILA=1024,
-                 FILAS_POR_MB=50,
+                 MEMORIA_POR_FILA=2048,
+                 FILAS_POR_MB=10,
                  CONSTANTE_HUBBLE=100,
                  ):
         # GRID

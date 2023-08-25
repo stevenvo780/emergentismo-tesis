@@ -39,7 +39,7 @@ class ConfigWindow:
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
         ultimo_puntaje = self.font.render(
-            f"Mejor recompensa: {self.entrenador.ultimo_puntaje}", True, (0, 0, 0))
+            f"Ultima recompensa: {self.entrenador.ultimo_puntaje}", True, (0, 0, 0))
         mejor_recompensa = self.font.render(
             f"Mejor recompensa: {self.entrenador.mejor_recompensa}", True, (0, 0, 0))
         generaciones_sin_mejora = self.font.render(

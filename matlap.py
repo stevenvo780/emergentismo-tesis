@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import cupy as cp
 import matplotlib.pyplot as plt
 import tkinter as tk
 import networkx as nx
@@ -7,6 +8,9 @@ import os
 from tkinter import ttk
 from threading import Thread
 from concurrent.futures import ThreadPoolExecutor
+from time_procedural import calcular_relaciones_matricial, calcular_distancias_matricial
+from typing import List
+from types_universo import PhysicsRules, NodoInterface
 
 
 def open_relaciones_window():
@@ -54,7 +58,8 @@ def plot_matrix(matriz, title, start_row=0, start_col=0, size=1000):
 
 def plot_relaciones(matriz_relaciones, title='Matriz Relaciones', start_row=0, start_col=0, size=1000):
     G = nx.Graph()
-    sub_matriz = matriz_relaciones[start_row:start_row + size, start_col:start_col + size]
+    sub_matriz = matriz_relaciones[start_row:start_row +
+                                   size, start_col:start_col + size]
 
     # Agregar nodos
     for i in range(size):
@@ -70,7 +75,6 @@ def plot_relaciones(matriz_relaciones, title='Matriz Relaciones', start_row=0, s
     nx.draw(G, pos, with_labels=True)
     plt.title(title)
     plt.show()
-
 
 
 def load_file(filename, progress_bar):
@@ -121,7 +125,35 @@ def load_distancias():
 
 
 def load_relaciones(start_row=0, start_col=0):
-    load_and_plot('matriz_relaciones.json', plot_relaciones, 'Matriz Relaciones', start_row=start_row, start_col=start_col)
+    progress_bar = ttk.Progressbar(
+        root, orient='horizontal', mode='indeterminate')
+    progress_bar.pack(pady=5)
+    progress_bar.start()
+
+    def calculate_and_plot():
+        # Cargar las reglas de física desde el archivo JSON
+        with open('mejor_universo.json', 'r') as file:
+            physics_rules_data = json.load(file)
+            physics_rules = PhysicsRules(**physics_rules_data)  # Asegúrate de adaptar esto a la estructura de tus datos
+
+        # Cargar cargas y energías desde sus archivos
+        with open('cargas.json', 'r') as file:
+            cargas = cp.array(json.load(file))
+        with open('energias.json', 'r') as file:
+            energias = cp.array(json.load(file))
+
+        # Construir los nodos a partir de las cargas y energías
+        nodos = [NodoInterface(str(i), carga, energia) for i, (carga, energia) in enumerate(zip(cargas.tolist(), energias.tolist()))]
+
+        matriz_distancias = calcular_distancias_matricial(nodos)
+        matriz_relaciones = calcular_relaciones_matricial(
+            physics_rules, cargas, matriz_distancias)
+        plot_relaciones(matriz_relaciones, 'Matriz Relaciones',
+                        start_row=start_row, start_col=start_col)
+        progress_bar.pack_forget()
+
+    thread = Thread(target=calculate_and_plot)
+    thread.start()
 
 
 root = tk.Tk()

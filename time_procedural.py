@@ -4,15 +4,15 @@ import cupy as cp
 import cupy
 
 # Configurar el límite de la memoria del dispositivo (por ejemplo, 4 GiB)
-device_limit = 16 * 1024**3
+device_limit = 32 * 1024**3
 
 # Configurar el gestor de memoria de CuPy
 mempool = cp.get_default_memory_pool()
 
-# Elegir el dispositivo con el que trabajar (por ejemplo, el 0)
+mempool.set_limit(size=device_limit)
+cupy.cuda.set_allocator(cupy.cuda.MemoryAsyncPool().malloc)
+
 with cp.cuda.Device(0):
-    mempool.set_limit(size=device_limit)
-    cupy.cuda.set_allocator(cupy.cuda.MemoryAsyncPool().malloc)
     def calcular_cargas(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
         interacciones_distancia = calcular_interacciones_distancia(
             cargas, matriz_distancias, physics_rules)
@@ -31,7 +31,6 @@ with cp.cuda.Device(0):
         fluctuacion = cp.sin(cargas_nuevas) * cp.random.uniform(-physics_rules.FLUCTUACION_MAXIMA,
                                                                 physics_rules.FLUCTUACION_MAXIMA, len(cargas_nuevas), dtype=cp.float32)
 
-        # Añade la interacción a distancia
         cargas_nuevas += interacciones_distancia
 
         cargas_nuevas += fluctuacion

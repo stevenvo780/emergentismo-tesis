@@ -3,7 +3,6 @@ from time_procedural import calcular_cargas, calcular_energia
 from random import uniform
 from typing import List
 import cupy as cp
-import cupy
 import subprocess
 
 
@@ -31,7 +30,7 @@ def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
 def obtener_memoria_disponible():
     try:
         result = subprocess.run(['nvidia-smi', '--query-gpu=memory.free',
-                                '--format=csv,noheader,nounits'], stdout=subprocess.PIPE)
+                                '--format=csv,noheader,nounits'], stdout=subprocess.PIPE) # type: ignore
         memoria_disponible = int(result.stdout.decode('utf-8').strip())
         return memoria_disponible  # Convertir a bytes
     except Exception as e:
