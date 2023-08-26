@@ -9,7 +9,6 @@ from keras.layers import Dense
 from keras.initializers import RandomUniform  # type: ignore
 import json
 import numpy as np
-import cupy as cp
 import time
 import threading
 import json
@@ -29,7 +28,7 @@ def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, ):
 class Entrenador:
     def __init__(self):
         self.mejor_recompensa = float('-inf')
-        self.ultimo_puntaje = 0
+        self.total_recompensa = 0
         self.generaciones_sin_mejora = 0
         self.universo = Universo()
         self.claves_parametros = [key for key in vars(
@@ -40,6 +39,8 @@ class Entrenador:
         self.poblacion = [self.cargar_red_neuronal() if i == 0 else self.crear_red_neuronal(
         ) for i in range(len(self.claves_parametros))]
         self.pausado = False
+        self.elite = []
+        self.recompensas = []
 
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.big_bang)
@@ -62,6 +63,8 @@ class Entrenador:
                             self.universo.energiasMatriz, self.universo.cargasMatriz, self.universo.matriz_distancias))
                         thread.start()
                     self.entrenar()
+                    if self.actualizar_tasas_y_guardar():
+                        break
             else:
                 time.sleep(1)
 
@@ -137,13 +140,17 @@ class Entrenador:
         for i, clave in enumerate(self.claves_parametros):
             setattr(self.universo.physics_rules, clave, nuevos_valores[i])
 
-    def mutate(self, neural_network, increase_mutation=False):
-        factor = systemRules.VARIACION_NEURONAL_GRANDE if increase_mutation else systemRules.VARIACION_NEURONAL_PEQUEÑA
+    def mutate(self, neural_network):
+        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_AUMENTO_MUTACION:
+            mutation_rate = systemRules.VARIACION_NEURONAL_GRANDE
+        else:
+            mutation_rate = systemRules.VARIACION_NEURONAL_PEQUEÑA
+
         weights = neural_network.get_weights()
         for i in range(len(weights)):
-            mutation_rate = factor * 2 if increase_mutation else factor
-            weights[i] += np.random.normal(0,
-                                           mutation_rate, weights[i].shape)
+            mutation_value = np.random.normal(0, 1, weights[i].shape)
+            mutation_mask = np.random.rand(*weights[i].shape) < mutation_rate
+            weights[i] += mutation_value * mutation_mask
         neural_network.set_weights(weights)
 
     def calcularRecompensa(self):
@@ -180,69 +187,63 @@ class Entrenador:
             if recompensa > self.mejor_recompensa:
                 self.mejor_recompensa = recompensa
                 mejores_nuevos_valores = nuevos_valores
-
-        total_recompensa = sum(recompensas)
-        if total_recompensa <= 0:
-            for nn in self.poblacion:
-                self.mutate(nn, increase_mutation=True)
-            num_to_reset = int(len(self.poblacion) *
-                               systemRules.PORCENTAJE_POBLACION_MUTACION)
-            for i in range(num_to_reset):
-                self.poblacion[i] = self.crear_red_neuronal()
-
-        elif total_recompensa < systemRules.MEJOR_RECOMPENSA:
-            for nn in self.poblacion:
-                self.mutate(nn, increase_mutation=False)
-
-        recompensas_np = cp.asarray(recompensas).get()
-        best_nn = self.poblacion[np.argmax(recompensas_np)]
-        self.guardar_red_neuronal(best_nn)
-
-        if total_recompensa != 0:
-            self.evolve_population(recompensas)
-
-        if mejores_nuevos_valores is not None:
-            if total_recompensa > systemRules.MEJOR_RECOMPENSA:
-                systemRules.MEJOR_RECOMPENSA = total_recompensa
-                self.guardar_mejor_universo(mejores_nuevos_valores)
-                self.guardar_mejor_puntaje()
-            if total_recompensa < systemRules.MEJOR_RECOMPENSA:
-                self.aplicar_nuevos_valores(mejores_nuevos_valores)
-                self.reiniciarUniverso(mejores_nuevos_valores)
-        self.ultimo_puntaje = total_recompensa
-        self.poblacion[0] = best_nn
-
-    def evolve_population(self, recompensas):
         recompensas_np = np.array(recompensas)
         recompensas_np = np.nan_to_num(
             recompensas_np, nan=0.0, posinf=0.0, neginf=0.0)
         min_recompensa = min(recompensas_np)
-        adjusted_recompensas = recompensas_np - min_recompensa
-        total_recompensa = sum(adjusted_recompensas)
-        epsilon = 1e-9
+        self.recompensas = recompensas_np - min_recompensa
+        self.total_recompensa = sum(self.recompensas)
+        self.evolve_population()
 
-        if total_recompensa == 0:
-            probabilidades_seleccion = np.ones(
-                len(adjusted_recompensas)) / len(adjusted_recompensas)
+        if mejores_nuevos_valores is not None:
+            if self.total_recompensa > systemRules.MEJOR_RECOMPENSA:
+                systemRules.MEJOR_RECOMPENSA = self.total_recompensa
+                self.guardar_mejor_universo(mejores_nuevos_valores)
+                self.guardar_mejor_puntaje()
+            if self.total_recompensa < systemRules.MEJOR_RECOMPENSA:
+                self.aplicar_nuevos_valores(mejores_nuevos_valores)
+                self.reiniciarUniverso(mejores_nuevos_valores)
+
+    def actualizar_tasas_y_guardar(self):
+        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_AUMENTO_MUTACION:
+            systemRules.VARIACION_NEURONAL_GRANDE *= 1.05
         else:
-            probabilidades_seleccion = adjusted_recompensas / \
-                (total_recompensa + epsilon)
-            # Normalizar probabilidades
+            systemRules.VARIACION_NEURONAL_GRANDE /= 1.05
+
+        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_TERMINAR:
+            print("Terminando el algoritmo debido a la falta de mejora.")
+            return True
+        return False
+
+    def seleccionar_padres(self):
+        epsilon = 1e-9
+        if self.total_recompensa == 0:
+            probabilidades_seleccion = np.ones(
+                len(self.recompensas)) / len(self.recompensas)
+        else:
+            probabilidades_seleccion = self.total_recompensa / \
+                (self.total_recompensa + epsilon)
             probabilidades_seleccion /= np.sum(probabilidades_seleccion)
 
         indices_seleccionados = np.random.choice(
             len(self.poblacion), size=len(self.poblacion), p=probabilidades_seleccion)
-        seleccionados = [self.poblacion[i] for i in indices_seleccionados]
+        return [self.poblacion[i] for i in indices_seleccionados]
+
+    def crear_nueva_poblacion(self, seleccionados):
         nueva_poblacion = []
         for i in range(0, len(seleccionados), 2):
             parent1 = seleccionados[i]
             parent2 = seleccionados[i + 1]
             child1, child2 = self.crossover(parent1, parent2)
             nueva_poblacion.extend([child1, child2])
+        return nueva_poblacion
+
+    def aplicar_mutaciones(self, nueva_poblacion):
         for nn in nueva_poblacion:
             if random.random() < systemRules.TASA_APRENDIZAJE:
                 self.mutate(nn)
-        self.poblacion = nueva_poblacion
+
+    def actualizar_generacion(self, recompensas):
         max_recompensa = max(recompensas)
         if max_recompensa > self.mejor_recompensa:
             self.mejor_recompensa = max_recompensa
@@ -250,8 +251,26 @@ class Entrenador:
         else:
             self.generaciones_sin_mejora += 1
 
+    def evolve_population(self):
+        seleccionados = self.seleccionar_padres()
+        nueva_poblacion = self.crear_nueva_poblacion(seleccionados)
+        self.aplicar_mutaciones(nueva_poblacion)
+        self.actualizar_generacion(self.recompensas)
+        self.mantener_elite(num_elite=2)
+        sorted_indices = np.argsort(self.recompensas)
+        worst_indices = sorted_indices[:len(self.elite)]
+        for i, elite_member in zip(worst_indices, self.elite):
+            nueva_poblacion[i] = elite_member
+
+        self.poblacion = nueva_poblacion
+
         if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_REINICIO:
             self.reiniciar_poblacion()
+
+    def mantener_elite(self, num_elite):
+        sorted_indices = np.argsort(self.recompensas)[::-1]
+        elite_indices = sorted_indices[:num_elite]
+        self.elite = [self.poblacion[i] for i in elite_indices]
 
     def reiniciar_poblacion(self):
         self.generaciones_sin_mejora = 0
@@ -267,8 +286,7 @@ class Entrenador:
             if np.prod(shape) <= 2:
                 continue
             punto_cruce1 = random.randint(1, np.prod(shape) - 3)
-            punto_cruce2 = random.randint(
-                punto_cruce1 + 1, np.prod(shape) - 2)
+            punto_cruce2 = random.randint(punto_cruce1 + 1, np.prod(shape) - 2)
             weights1 = np.concatenate((parent1.get_weights()[i].flatten()[:punto_cruce1],
                                        parent2.get_weights()[i].flatten()[
                 punto_cruce1:punto_cruce2],

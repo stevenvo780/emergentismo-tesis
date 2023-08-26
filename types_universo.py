@@ -43,13 +43,15 @@ class SystemRules:
                  VARIACION_NEURONAL_PEQUEÑA=0.05,
                  FACTOR_RELACION_LIMIT=10,
                  TASA_APRENDIZAJE=0.5,
+                 GENERACIONES_PARA_AUMENTO_MUTACION=5,
+                 GENERACIONES_PARA_TERMINAR=1000,
 
                  # Configuraciones para evitar errores
                  LIMITE_INTERCAMBIO=1,
                  GENERACIONES_PARA_REINICIO=10,
                  TOLERANCIA_ENERGIA=1,
                  MEMORIA_POR_FILA=1048,
-                 FILAS_POR_MB=100,
+                 FILAS_POR_MB=200,
                  CONSTANTE_HUBBLE=500,
                  ):
         # GRID
@@ -70,6 +72,8 @@ class SystemRules:
         self.VARIACION_NEURONAL_PEQUEÑA = VARIACION_NEURONAL_PEQUEÑA
         self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
         self.TASA_APRENDIZAJE = TASA_APRENDIZAJE
+        self.GENERACIONES_PARA_AUMENTO_MUTACION = GENERACIONES_PARA_AUMENTO_MUTACION
+        self.GENERACIONES_PARA_TERMINAR = GENERACIONES_PARA_TERMINAR
 
         # Configuraciones para evitar errores
         self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO

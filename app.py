@@ -38,15 +38,15 @@ class ConfigWindow:
         self.font = pygame.font.Font(None, 20)
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
-        ultimo_puntaje = self.font.render(
-            f"Ultima recompensa: {self.entrenador.ultimo_puntaje}", True, (0, 0, 0))
+        total_recompensa = self.font.render(
+            f"Ultima recompensa: {self.entrenador.total_recompensa}", True, (0, 0, 0))
         mejor_recompensa = self.font.render(
             f"Mejor recompensa: {self.entrenador.mejor_recompensa}", True, (0, 0, 0))
         generaciones_sin_mejora = self.font.render(
             f"Tiempo sin mejora: {self.entrenador.generaciones_sin_mejora}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
-        self.screen.blit(ultimo_puntaje, (10, 35))
+        self.screen.blit(total_recompensa, (10, 35))
         self.screen.blit(mejor_recompensa, (10, 55))
         self.screen.blit(generaciones_sin_mejora, (10, 75))
         self.font = pygame.font.Font(None, 18)
