@@ -134,7 +134,8 @@ def load_relaciones(start_row=0, start_col=0):
         # Cargar las reglas de física desde el archivo JSON
         with open('mejor_universo.json', 'r') as file:
             physics_rules_data = json.load(file)
-            physics_rules = PhysicsRules(**physics_rules_data)  # Asegúrate de adaptar esto a la estructura de tus datos
+            # Asegúrate de adaptar esto a la estructura de tus datos
+            physics_rules = PhysicsRules(**physics_rules_data)
 
         # Cargar cargas y energías desde sus archivos
         with open('cargasMatriz.json', 'r') as file:
@@ -142,10 +143,8 @@ def load_relaciones(start_row=0, start_col=0):
         with open('energiasMatriz.json', 'r') as file:
             energias = cp.array(json.load(file))
 
-        # Construir los nodos a partir de las cargas y energías
-        nodos = [NodoInterface(str(i), carga, energia) for i, (carga, energia) in enumerate(zip(cargas.tolist(), energias.tolist()))]
-
-        matriz_distancias = calcular_distancias_matricial(nodos)
+        matriz_distancias = calcular_distancias_matricial(
+            len(cargas), len(cargas))
         matriz_relaciones = calcular_relaciones_matricial(
             physics_rules, cargas, matriz_distancias)
         plot_relaciones(matriz_relaciones, 'Matriz Relaciones',

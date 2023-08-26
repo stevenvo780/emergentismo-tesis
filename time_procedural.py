@@ -46,9 +46,18 @@ with cp.cuda.Device(0):
 
     def calcular_relaciones_matricial(physics_rules: PhysicsRules, cargas: cp.ndarray, matriz_distancias: cp.ndarray) -> cp.ndarray:
         mask = matriz_distancias == 1
-        diferencia_cargas = cp.abs(cargas[:, cp.newaxis] - cargas)
-        relacion_mask = mask & (diferencia_cargas > physics_rules.ENERGIA)
-        return cp.where(relacion_mask, cp.exp(diferencia_cargas), 0)
+        diferencia_cargas = cargas[:, cp.newaxis] - cargas
+        relacion_mask = mask & (cp.abs(diferencia_cargas)
+                                > physics_rules.ENERGIA)
+
+        # Calcula el intercambio de cargas entre nodos vecinos
+        intercambio = physics_rules.FACTOR_ESTABILIDAD * diferencia_cargas
+        intercambio = cp.where(relacion_mask, intercambio, 0)
+
+        # Aplicar el intercambio de cargas a cada nodo
+        intercambio_nodos = cp.sum(intercambio, axis=1)
+
+        return intercambio_nodos
 
     def calcular_distancias_matricial(filas, columnas):
         x, y = cp.meshgrid(cp.arange(filas), cp.arange(columnas))
