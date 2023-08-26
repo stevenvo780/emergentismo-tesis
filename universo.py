@@ -26,7 +26,6 @@ class Universo:
         mask = cp.random.rand(
             systemRules.FILAS, systemRules.COLUMNAS) > self.physics_rules.PROBABILIDAD_VIDA_INICIAL
         self.cargasMatriz[mask] = 0
-
         self.energiasMatriz = calcular_energia(cp.ones_like(
             self.cargasMatriz), self.cargasMatriz, self.physics_rules)
         self.matriz_distancias = calcular_distancias_matricial(
@@ -38,7 +37,7 @@ class Universo:
     def next(self):
         self.cargasMatriz, self.energiasMatriz = next_step(self)
         if self.tiempo % systemRules.CONSTANTE_HUBBLE == 0:
-            # self.cargasMatriz = expandir_espacio(self.cargasMatriz)
+            self.cargasMatriz = expandir_espacio(self.cargasMatriz)
             self.matriz_distancias = calcular_distancias_matricial(
                 systemRules.FILAS, systemRules.COLUMNAS)
             self.energiasMatriz = calcular_energia(cp.ones_like(

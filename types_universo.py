@@ -34,7 +34,7 @@ class SystemRules:
 
                  # Red evolutiva
                  MEJOR_RECOMPENSA=0,
-                 NEURONAS_PROFUNDIDAD=16,
+                 NEURONAS_PROFUNDIDAD=60,
                  NEURONAS_DENSIDAD_ENTRADA=12,
                  INTERVALO_ENTRENAMIENTO=2000,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
@@ -48,8 +48,8 @@ class SystemRules:
                  LIMITE_INTERCAMBIO=1,
                  GENERACIONES_PARA_REINICIO=10,
                  TOLERANCIA_ENERGIA=1,
-                 MEMORIA_POR_FILA=2048,
-                 FILAS_POR_MB=10,
+                 MEMORIA_POR_FILA=1048,
+                 FILAS_POR_MB=100,
                  CONSTANTE_HUBBLE=500,
                  ):
         # GRID

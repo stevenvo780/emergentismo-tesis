@@ -32,7 +32,7 @@ def obtener_memoria_disponible():
         result = subprocess.run(['nvidia-smi', '--query-gpu=memory.free',
                                 '--format=csv,noheader,nounits'], stdout=subprocess.PIPE)  # type: ignore
         memoria_disponible = int(result.stdout.decode('utf-8').strip())
-        return memoria_disponible  # Convertir a bytes
+        return memoria_disponible  # Convertir a megabytes
     except Exception as e:
         print("Error al obtener la memoria disponible de la GPU:", e)
         return 0
@@ -42,18 +42,21 @@ def expandir_espacio(cargasMatriz: cp.ndarray) -> cp.ndarray:
     memoria_disponible = obtener_memoria_disponible()
     crecimiento_permitido = int(
         memoria_disponible // systemRules.MEMORIA_POR_FILA * systemRules.FILAS_POR_MB)
-    crecimiento_x = min(systemRules.CRECIMIENTO_X, crecimiento_permitido)
-    crecimiento_y = min(systemRules.CRECIMIENTO_Y, crecimiento_permitido)
+    crecimiento_x = min(systemRules.CRECIMIENTO_X // 2, crecimiento_permitido // 2)
+    crecimiento_y = min(systemRules.CRECIMIENTO_Y // 2, crecimiento_permitido // 2)
 
-    new_rows = cp.array(
-        [uniform(-1, 1) for _ in range(systemRules.COLUMNAS * crecimiento_x)]).reshape(crecimiento_x, -1)
-    new_columns = cp.array([uniform(-1, 1) for _ in range(
-        (systemRules.FILAS + crecimiento_x) * crecimiento_y)]).reshape(-1, crecimiento_y)
+    if crecimiento_x > 0 and systemRules.COLUMNAS > 0:
+        new_rows = cp.array(
+            [uniform(-1, 1) for _ in range(systemRules.COLUMNAS * crecimiento_x * 2)]).reshape(crecimiento_x * 2, -1)
+        cargasMatriz = cp.vstack((new_rows[:crecimiento_x, :], cargasMatriz, new_rows[crecimiento_x:, :]))
 
-    cargasMatriz = cp.vstack((cargasMatriz, new_rows))
-    cargasMatriz = cp.hstack((cargasMatriz, new_columns))
+    if crecimiento_y > 0 and systemRules.FILAS + 2 * crecimiento_x > 0:
+        new_columns = cp.array([uniform(-1, 1) for _ in range(
+            (systemRules.FILAS + 2 * crecimiento_x) * crecimiento_y * 2)]).reshape(-1, crecimiento_y * 2)
+        cargasMatriz = cp.hstack((new_columns[:, :crecimiento_y], cargasMatriz, new_columns[:, crecimiento_y:]))
 
-    systemRules.FILAS += crecimiento_x
-    systemRules.COLUMNAS += crecimiento_y
+    systemRules.FILAS += 2 * crecimiento_x
+    systemRules.COLUMNAS += 2 * crecimiento_y
 
     return cargasMatriz
+

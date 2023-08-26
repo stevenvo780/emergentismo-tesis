@@ -73,7 +73,6 @@ class ConfigWindow:
 class App:
     def __init__(self, entrenador: Entrenador):
         self.entrenador = entrenador
-        self.gridSize = systemRules.FILAS
         self.cellSize = 10
         self.view_offset = [0, 0]
         self.screenSize = [1600, 820]
@@ -183,8 +182,8 @@ class App:
 
         for index, (carga, energia) in enumerate(zip(cargas.flat, energias.flat)):
             cellSize = self.cellSize * self.zoom_level
-            x = (index % self.gridSize) * cellSize - self.view_offset[0]
-            y = (index // self.gridSize) * cellSize - self.view_offset[1]
+            x = (index % systemRules.FILAS) * cellSize - self.view_offset[0]
+            y = (index // systemRules.COLUMNAS) * cellSize - self.view_offset[1]
 
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue

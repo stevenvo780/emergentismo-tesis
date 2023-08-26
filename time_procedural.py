@@ -57,27 +57,27 @@ with cp.cuda.Device(0):
         return cp.sqrt(dx ** 2 + dy ** 2)
 
     def calcular_entropia_condicional(cargas: cp.ndarray, energias: cp.ndarray, matriz_distancias: cp.ndarray) -> float:
-        n = len(cargas)
-
-        # Obtener los índices de los vecinos
         vecinos_indices = cp.where(matriz_distancias == 1)
-        cargas_vecinos = cargas[vecinos_indices[0]].reshape(-1, 1)
-        energias_vecinos = energias[vecinos_indices[0]].reshape(-1, 1)
+        cargas_vecinos = cargas[vecinos_indices[0]]
+        energias_vecinos = energias[vecinos_indices[0]]
 
-        # Define el número de bins (intervalos) para el histograma
-        num_bins = 10  # Ajusta esto según tus datos y preferencias
+        # Asegurar que los histogramas sumen 1 (probabilidades)
+        n = len(cargas_vecinos)
+        num_bins = 10
 
-        # Calcular las frecuencias conjuntas de cargas y energías de los vecinos
         p_x_y, _, _ = cp.histogram2d(
             cargas_vecinos.ravel(), energias_vecinos.ravel(), bins=num_bins)
-        p_x_y /= n
+        p_x_y /= p_x_y.sum()
+
         p_x = cp.sum(p_x_y, axis=1)
         p_y = cp.sum(p_x_y, axis=0)
 
         # Evitar la división por cero y los logaritmos de cero
-        p_x_y_safe = cp.where(p_x_y > 0, p_x_y, 1)
-        p_y_safe = cp.where(p_y > 0, p_y, 1)
+        # un pequeño valor para evitar log(0) y divisiones por cero
+        epsilon = 1e-10
+        p_x_y_safe = cp.where(p_x_y > epsilon, p_x_y, epsilon)
+        p_y_safe = cp.where(p_y > epsilon, p_y, epsilon)
 
         entropia_condicional = -cp.sum(p_x_y * cp.log2(p_x_y_safe / p_y_safe))
 
-        return entropia_condicional.item()
+        return float(entropia_condicional)

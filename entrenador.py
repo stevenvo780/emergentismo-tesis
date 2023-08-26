@@ -16,6 +16,7 @@ import json
 
 lock_guardar = Lock()
 
+
 def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, ):
     with lock_guardar:
         with open('energiasMatriz.json', 'w') as file:
@@ -23,6 +24,7 @@ def save_matrices_to_json(energiasMatriz, cargasMatriz, matriz_distancias, ):
 
         with open('cargasMatriz.json', 'w') as file:
             json.dump(cargasMatriz.tolist(), file)
+
 
 class Entrenador:
     def __init__(self):
@@ -147,7 +149,8 @@ class Entrenador:
     def calcularRecompensa(self):
         cargas = self.universo.cargasMatriz
         energias = self.universo.energiasMatriz
-        entropia_condicional = calcular_entropia_condicional(cargas, energias, self.universo.matriz_distancias)
+        entropia_condicional = calcular_entropia_condicional(
+            cargas, energias, self.universo.matriz_distancias)
         recompensa = entropia_condicional * systemRules.FACTOR_ENTROPIA
 
         return recompensa
