@@ -147,8 +147,7 @@ class Entrenador:
     def calcularRecompensa(self):
         cargas = self.universo.cargasMatriz
         energias = self.universo.energiasMatriz
-        entropia_condicional = calcular_entropia_condicional(
-            cargas, energias, self.universo.matriz_distancias)
+        entropia_condicional = calcular_entropia_condicional(cargas, energias, self.universo.matriz_distancias)
         recompensa = entropia_condicional * systemRules.FACTOR_ENTROPIA
 
         return recompensa

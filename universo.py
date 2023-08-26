@@ -10,32 +10,27 @@ from threading import Lock
 
 class Universo:
     def __init__(self, physics_rules: 'PhysicsRules' = PhysicsRules()):
-        self.nodos: List['NodoInterface'] = []
         self.physics_rules = physics_rules
         self.id = str(uuid4())
         self.tiempo: int = 0
-        self.cargasMatriz: cp.ndarray
+        self.cargasMatriz: cp.ndarray = cp.zeros(
+            (systemRules.FILAS, systemRules.COLUMNAS), dtype=cp.float16)  # Inicialización agregada
         self.energiasMatriz: cp.ndarray
         self.matriz_distancias: cp.ndarray
         self.lock = Lock()
         self.determinacionesDelSistema()
 
     def determinacionesDelSistema(self):
-        for i in range(systemRules.FILAS):
-            for j in range(systemRules.COLUMNAS):
-                cargas = random.random() * 2 - 1
-                energia = 1 - abs(cargas)
-                if random.random() > self.physics_rules.PROBABILIDAD_VIDA_INICIAL:
-                    cargas = 0
-                    energia = 0
-                nodo = crear_nodo(i, j, cargas, energia)
-                self.nodos.append(nodo)
-        self.cargasMatriz = cp.array(
-            [nodo.cargas for nodo in self.nodos], dtype=cp.float16)
+        self.cargasMatriz = cp.random.uniform(-1, 1,
+                                              (systemRules.FILAS, systemRules.COLUMNAS))
+        mask = cp.random.rand(
+            systemRules.FILAS, systemRules.COLUMNAS) > self.physics_rules.PROBABILIDAD_VIDA_INICIAL
+        self.cargasMatriz[mask] = 0
+
         self.energiasMatriz = calcular_energia(cp.ones_like(
             self.cargasMatriz), self.cargasMatriz, self.physics_rules)
-
-        self.matriz_distancias = calcular_distancias_matricial(self.nodos)
+        self.matriz_distancias = calcular_distancias_matricial(
+            systemRules.FILAS, systemRules.COLUMNAS)
 
     def obtener_relaciones(self):
         return calcular_relaciones_matricial(self.physics_rules, self.cargasMatriz, self.matriz_distancias)
@@ -43,9 +38,8 @@ class Universo:
     def next(self):
         self.cargasMatriz, self.energiasMatriz = next_step(self)
         if self.tiempo % systemRules.CONSTANTE_HUBBLE == 0:
-            expandir_espacio(self.nodos)
-            self.matriz_distancias = calcular_distancias_matricial(self.nodos)
-            self.cargasMatriz = cp.array(
-                [nodo.cargas for nodo in self.nodos], dtype=cp.float16)
+            # self.cargasMatriz = expandir_espacio(self.cargasMatriz)
+            self.matriz_distancias = calcular_distancias_matricial(
+                systemRules.FILAS, systemRules.COLUMNAS)
             self.energiasMatriz = calcular_energia(cp.ones_like(
                 self.cargasMatriz), self.cargasMatriz, self.physics_rules)

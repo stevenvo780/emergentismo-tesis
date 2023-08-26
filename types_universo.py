@@ -36,7 +36,7 @@ class SystemRules:
                  MEJOR_RECOMPENSA=0,
                  NEURONAS_PROFUNDIDAD=16,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=500,
+                 INTERVALO_ENTRENAMIENTO=100,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
                  FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.1,
@@ -50,7 +50,7 @@ class SystemRules:
                  TOLERANCIA_ENERGIA=1,
                  MEMORIA_POR_FILA=2048,
                  FILAS_POR_MB=10,
-                 CONSTANTE_HUBBLE=100,
+                 CONSTANTE_HUBBLE=500,
                  ):
         # GRID
         self.GIRD_SIZE = GIRD_SIZE

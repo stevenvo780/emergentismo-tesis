@@ -71,9 +71,9 @@ class ConfigWindow:
 
 
 class App:
-    def __init__(self, entrenador):
+    def __init__(self, entrenador: Entrenador):
         self.entrenador = entrenador
-        self.gridSize = int(len(self.entrenador.universo.nodos) ** 0.5)
+        self.gridSize = systemRules.FILAS
         self.cellSize = 10
         self.view_offset = [0, 0]
         self.screenSize = [1600, 820]
