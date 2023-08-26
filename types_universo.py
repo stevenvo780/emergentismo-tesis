@@ -36,7 +36,7 @@ class SystemRules:
                  MEJOR_RECOMPENSA=0,
                  NEURONAS_PROFUNDIDAD=16,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=100,
+                 INTERVALO_ENTRENAMIENTO=2000,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
                  FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.1,

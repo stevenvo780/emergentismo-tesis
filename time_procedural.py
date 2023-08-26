@@ -18,37 +18,30 @@ with cp.cuda.Device(0):
             cargas, matriz_distancias, physics_rules)
         vecinos_vivos = cp.sum(matriz_distancias == 1,
                                axis=1).reshape(cargas.shape)
-        nacimiento = (cargas == 0) & (cp.random.rand(*cargas.shape) <
-                                      physics_rules.PROBABILIDAD_VIDA_INICIAL * vecinos_vivos)
 
-        supervivencia = (cargas != 0) & (cp.random.rand(len(cargas)) < 1 / (1 +
-                                                                            cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - physics_rules.CONSTANTE_HUBBLE))))
+        nacimiento = (cargas == 0) & (cp.random.rand(*cargas.shape)
+                                      < physics_rules.PROBABILIDAD_VIDA_INICIAL * vecinos_vivos)
+        supervivencia = (cargas != 0) & (cp.random.rand(*cargas.shape) < 1 / (
+            1 + cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - physics_rules.CONSTANTE_HUBBLE))))
         muerte = ~nacimiento & ~supervivencia
 
-        cargas_nuevas = cargas.copy()
-        cargas_nuevas[nacimiento] = cp.random.uniform(
-            -1, 1, cp.sum(nacimiento).item())
-        cargas_nuevas[muerte] = 0
-        fluctuacion = cp.sin(cargas_nuevas) * cp.random.uniform(-physics_rules.FLUCTUACION_MAXIMA,
-                                                                physics_rules.FLUCTUACION_MAXIMA, len(cargas_nuevas), dtype=cp.float32)
+        cargas[nacimiento] = cp.random.uniform(-1,
+                                               1, cp.sum(nacimiento).item())
+        cargas[muerte] = 0
+        fluctuacion = cp.sin(cargas) * cp.random.uniform(-physics_rules.FLUCTUACION_MAXIMA,
+                                                         physics_rules.FLUCTUACION_MAXIMA, cargas.shape)
 
-        cargas_nuevas += interacciones_distancia
-
-        cargas_nuevas += fluctuacion
-        return cp.clip(cargas_nuevas, -systemRules.LIMITE_INTERCAMBIO, systemRules.LIMITE_INTERCAMBIO)
+        cargas += interacciones_distancia + fluctuacion
+        return cp.clip(cargas, -systemRules.LIMITE_INTERCAMBIO, systemRules.LIMITE_INTERCAMBIO)
 
     def calcular_interacciones_distancia(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
         decaimiento = cp.exp(-matriz_distancias /
                              physics_rules.LONGITUD_DE_DECAY)
         ruido_distancia = cp.random.uniform(
             -physics_rules.RUIDO_MAXIMO, physics_rules.RUIDO_MAXIMO, matriz_distancias.shape)
-        interacciones = cp.sum(
-            decaimiento * ruido_distancia, axis=1).reshape(cargas.shape)
-        return interacciones
+        return cp.sum(decaimiento * ruido_distancia, axis=1).reshape(cargas.shape)
 
     def calcular_energia(energias: cp.ndarray, cargas: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
-        # Asegurándonos de que energias y cargas tengan la misma forma
-        assert energias.shape == cargas.shape
         return cp.where(cp.abs(energias + cargas) > physics_rules.UMBRAL_CARGA, 1, 0)
 
     def calcular_relaciones_matricial(physics_rules: PhysicsRules, cargas: cp.ndarray, matriz_distancias: cp.ndarray) -> cp.ndarray:
@@ -59,15 +52,9 @@ with cp.cuda.Device(0):
 
     def calcular_distancias_matricial(filas, columnas):
         x, y = cp.meshgrid(cp.arange(filas), cp.arange(columnas))
-        x = x.flatten()
-        y = y.flatten()
-
-        dx = cp.subtract(x[:, cp.newaxis], x[cp.newaxis, :])
-        dy = cp.subtract(y[:, cp.newaxis], y[cp.newaxis, :])
-
-        distancias = cp.sqrt(dx ** 2 + dy ** 2)
-
-        return distancias
+        dx = x[:, None] - x[None, :]
+        dy = y[:, None] - y[None, :]
+        return cp.sqrt(dx ** 2 + dy ** 2)
 
     def calcular_entropia_condicional(cargas: cp.ndarray, energias: cp.ndarray, matriz_distancias: cp.ndarray) -> float:
         n = len(cargas)
@@ -94,4 +81,3 @@ with cp.cuda.Device(0):
         entropia_condicional = -cp.sum(p_x_y * cp.log2(p_x_y_safe / p_y_safe))
 
         return entropia_condicional.item()
-
