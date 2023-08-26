@@ -34,7 +34,7 @@ class SystemRules:
 
                  # Red evolutiva
                  MEJOR_RECOMPENSA=0,
-                 NEURONAS_PROFUNDIDAD=60,
+                 NEURONAS_PROFUNDIDAD=24,
                  NEURONAS_DENSIDAD_ENTRADA=12,
                  INTERVALO_ENTRENAMIENTO=2000,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
