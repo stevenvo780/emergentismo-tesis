@@ -34,21 +34,23 @@ class SystemRules:
 
                  # Red evolutiva
                  MEJOR_RECOMPENSA=0,
+                 # SIEMPRE DEBE SER PAR
+                 POPULATION_SIZE=6,
                  NEURONAS_PROFUNDIDAD=24,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=2000,
+                 INTERVALO_ENTRENAMIENTO=1000,
                  PORCENTAJE_POBLACION_MUTACION=0.2,
                  FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.1,
                  VARIACION_NEURONAL_PEQUEÑA=0.05,
                  FACTOR_RELACION_LIMIT=10,
                  TASA_APRENDIZAJE=0.5,
-                 GENERACIONES_PARA_AUMENTO_MUTACION=5,
+                 GENERACIONES_PARA_AUMENTO_MUTACION=10,
                  GENERACIONES_PARA_TERMINAR=1000,
 
                  # Configuraciones para evitar errores
                  LIMITE_INTERCAMBIO=1,
-                 GENERACIONES_PARA_REINICIO=10,
+                 GENERACIONES_PARA_REINICIO=100,
                  TOLERANCIA_ENERGIA=1,
                  MEMORIA_POR_FILA=1048,
                  FILAS_POR_MB=200,
@@ -63,6 +65,7 @@ class SystemRules:
 
         # Red evolutiva
         self.MEJOR_RECOMPENSA = MEJOR_RECOMPENSA
+        self.POPULATION_SIZE = POPULATION_SIZE
         self.NEURONAS_PROFUNDIDAD = NEURONAS_PROFUNDIDAD
         self.NEURONAS_DENSIDAD_ENTRADA = NEURONAS_DENSIDAD_ENTRADA
         self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO

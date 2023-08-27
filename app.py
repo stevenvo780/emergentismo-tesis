@@ -38,25 +38,29 @@ class ConfigWindow:
         self.font = pygame.font.Font(None, 20)
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
-        total_recompensa = self.font.render(
-            f"Ultima recompensa: {self.entrenador.total_recompensa}", True, (0, 0, 0))
-        mejor_recompensa = self.font.render(
-            f"Mejor recompensa: {self.entrenador.mejor_recompensa}", True, (0, 0, 0))
-        generaciones_sin_mejora = self.font.render(
-            f"Tiempo sin mejora: {self.entrenador.generaciones_sin_mejora}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
-        self.screen.blit(total_recompensa, (10, 35))
-        self.screen.blit(mejor_recompensa, (10, 55))
-        self.screen.blit(generaciones_sin_mejora, (10, 75))
+        claves_mostrar = [
+            'recompensa',
+            'total_recompensa',
+            'mejor_recompensa',
+            'generaciones_sin_mejora',
+            'contador_test_poblacion',
+        ]
+
+        for i, clave in enumerate(claves_mostrar):
+            # 'N/A' en caso de que la clave no exista
+            valor = getattr(self.entrenador, clave, 'N/A')
+            label = self.font.render(f"{clave}: {valor}", True, (0, 0, 0))
+            self.screen.blit(label, (10, 25 + i * 20))
         self.font = pygame.font.Font(None, 18)
         for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (6, 100 + i * 18))
+            self.screen.blit(label, (6, 135 + i * 18))
 
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (6, (560 + i * 18)))
+            self.screen.blit(label, (6, (570 + i * 18)))
 
         # Dibujar el botón de pausa/reanudación
         pygame.draw.rect(self.screen, self.button_color, self.button_rect)
@@ -183,7 +187,8 @@ class App:
         for index, (carga, energia) in enumerate(zip(cargas.flat, energias.flat)):
             cellSize = self.cellSize * self.zoom_level
             x = (index % systemRules.FILAS) * cellSize - self.view_offset[0]
-            y = (index // systemRules.COLUMNAS) * cellSize - self.view_offset[1]
+            y = (index // systemRules.COLUMNAS) * \
+                cellSize - self.view_offset[1]
 
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
