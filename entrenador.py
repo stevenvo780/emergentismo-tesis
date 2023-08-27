@@ -63,7 +63,6 @@ class Entrenador:
                             self.universo.energiasMatriz, self.universo.cargasMatriz))
                         thread.start()
                     self.entrenar()
-
                     if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_TERMINAR:
                         print("Terminando el algoritmo debido a la falta de mejora.")
                         break
@@ -146,11 +145,10 @@ class Entrenador:
         return child1, child2
 
     def predecir_valores(self, neural_network):
-        input_data = np.array([len(self.claves_parametros)],
+        input_data = np.array([len(self.claves_parametros) / 100],
                               dtype=float)
-        nuevos_valor = neural_network.predict(
+        return neural_network.predict(
             input_data.reshape(1, -1)).flatten()[0]
-        return nuevos_valor
 
     def aplicar_mutaciones(self, nueva_poblacion):
         for nn in nueva_poblacion:
@@ -175,7 +173,7 @@ class Entrenador:
                   activation='relu', kernel_initializer=RandomUniform(minval=-1, maxval=1)),
             Dense(systemRules.NEURONAS_PROFUNDIDAD, activation='relu',
                   kernel_initializer=RandomUniform(minval=-1, maxval=1)),
-            Dense(len(self.claves_parametros), activation='sigmoid',
+            Dense(1, activation='sigmoid',
                   kernel_initializer=RandomUniform(minval=-1, maxval=1))
         ])
         model.compile(loss='mse', optimizer='adam')
