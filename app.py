@@ -14,9 +14,10 @@ class ConfigWindow:
         self.screen = screen
         self.button_color = (50, 200, 50)
         self.text_color = (255, 255, 255)
-        self.button_font = pygame.font.Font(None, 36)
-        # Puedes ajustar la posición y tamaño del botón
-        self.button_rect = pygame.Rect(300, 10, 100, 50)
+        self.button_font = pygame.font.Font(None, 26)
+        self.button_rect =      pygame.Rect(340, 130, 60, 30)
+        self.exit_button_rect = pygame.Rect(340, 190, 60, 30)
+        self.exit_button_label = self.button_font.render("Salir", True, self.text_color)  # Etiqueta del botón "Salir"
         self.paused = False
         self.update_button()
 
@@ -42,6 +43,7 @@ class ConfigWindow:
         self.screen.blit(time_label, (10, 10))
         claves_mostrar = [
             'recompensa_actual_generacion',
+            'mejor_total_recompensa',
             'actual_total_recompensa',
             'mejor_maxima_recompensa',
             'generaciones_sin_mejora',
@@ -56,16 +58,19 @@ class ConfigWindow:
         self.font = pygame.font.Font(None, 18)
         for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (6, 135 + i * 18))
+            self.screen.blit(label, (6, 145 + i * 18))
 
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(label, (6, (570 + i * 18)))
 
-        # Dibujar el botón de pausa/reanudación
+        # Dibujar el botón de pausa/reanudación (ya existente)
         pygame.draw.rect(self.screen, self.button_color, self.button_rect)
-        self.screen.blit(self.button_label,
-                         (self.button_rect.x + 10, self.button_rect.y + 10))
+        self.screen.blit(self.button_label, (self.button_rect.x + 10, self.button_rect.y + 10))
+
+        # Dibujar el nuevo botón "Salir"
+        pygame.draw.rect(self.screen, self.button_color, self.exit_button_rect)
+        self.screen.blit(self.exit_button_label, (self.exit_button_rect.x + 10, self.exit_button_rect.y + 10))
 
     def update_configurations(self):
         for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physics_rules).items()):
@@ -117,6 +122,12 @@ class App:
                             self.entrenador.pausarEntrenamiento()
                         else:
                             self.entrenador.reanudarEntrenamiento()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.config_window.exit_button_rect.collidepoint((mouse_pos[0], mouse_pos[1])):
+                        self.config_window.paused = not self.config_window.paused
+                        self.entrenador.run = False
+                        running = False
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
