@@ -43,7 +43,6 @@ class ConfigWindow:
         self.screen.blit(time_label, (10, 10))
         claves_mostrar = [
             'recompensa_actual_generacion',
-            'mejor_total_recompensa',
             'actual_total_recompensa',
             'mejor_maxima_recompensa',
             'generaciones_sin_mejora',

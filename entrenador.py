@@ -19,7 +19,6 @@ class Entrenador:
     def __init__(self):
         self.lock = Lock()
         self.mejor_maxima_recompensa: float = 0.0
-        self.mejor_total_recompensa = 0
         self.actual_total_recompensa = 0
         self.generaciones_sin_mejora = 0
         self.universo = Universo()
@@ -69,7 +68,7 @@ class Entrenador:
 
     def entrenar(self):
         self.evolve_population()
-        self.actual_total_recompensa = 0
+        self.actual_total_recompensa = sum(self.recompensas)
         max_recompensa: float = max(self.recompensas)
         if max_recompensa > self.mejor_maxima_recompensa:
             self.mejor_maxima_recompensa = max_recompensa
@@ -78,8 +77,8 @@ class Entrenador:
             systemRules.VARIACION_NEURONAL_PEQUEÑA /= 0.5
         else:
             self.generaciones_sin_mejora += 1
-        if self.mejor_total_recompensa > systemRules.MEJOR_TOTAL_RECOMPENSA:
-            systemRules.MEJOR_TOTAL_RECOMPENSA = self.mejor_total_recompensa
+        if self.actual_total_recompensa > systemRules.MEJOR_TOTAL_RECOMPENSA:
+            systemRules.MEJOR_TOTAL_RECOMPENSA = self.actual_total_recompensa
             systemRules.VARIACION_NEURONAL_GRANDE /= 2.05
             systemRules.VARIACION_NEURONAL_PEQUEÑA /= 1.05
             self.guardar_mejor_puntaje()
@@ -258,23 +257,17 @@ class Entrenador:
         if self.elite:
             mejores_nuevos_valores = self.predecir_valores(
                 self.elite[0])
+            mejores_nuevos_valores = list(
+                map(float, mejores_nuevos_valores))
             mejor_universo = dict(
                 zip(self.claves_parametros, mejores_nuevos_valores))
-
-            with open('mejor_universo.json', 'w') as file:
-                json.dump(mejor_universo, file)
         else:
             mejores_nuevos_valores = np.random.rand(
                 len(self.claves_parametros))
-
+            mejores_nuevos_valores = list(
+                map(float, mejores_nuevos_valores))
             mejor_universo = dict(
                 zip(self.claves_parametros, mejores_nuevos_valores))
-
-            with open('mejor_universo.json', 'w') as file:
-                json.dump(mejor_universo, file)
-
-        mejor_universo = {clave: float(valor) for clave, valor in zip(
-            self.claves_parametros, mejores_nuevos_valores)}
 
         with open('mejor_universo.json', 'w') as file:
             json.dump(mejor_universo, file)
