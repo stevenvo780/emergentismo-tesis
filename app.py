@@ -1,7 +1,10 @@
+import time
 import pygame
 from entrenador import Entrenador
 from types_universo import systemRules
-
+import cupy as cp
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
 pygame.init()
 
 
@@ -9,7 +12,17 @@ class ConfigWindow:
     def __init__(self, entrenador, screen):
         self.entrenador = entrenador
         self.screen = screen
-        self.font = pygame.font.Font(None, 24)
+        self.button_color = (50, 200, 50)
+        self.text_color = (255, 255, 255)
+        self.button_font = pygame.font.Font(None, 36)
+        # Puedes ajustar la posición y tamaño del botón
+        self.button_rect = pygame.Rect(300, 10, 100, 50)
+        self.paused = False
+        self.update_button()
+
+    def update_button(self):
+        self.button_label = self.button_font.render(
+            "Pausar" if not self.paused else "Reanudar", True, self.text_color)
 
     def update_screen(self, screen):
         self.screen = screen
@@ -17,42 +30,53 @@ class ConfigWindow:
     def run(self):
         self.update_configurations()
 
-    def refresh(self, entrenador):
+    def refresh(self, entrenador: Entrenador):
         self.entrenador = entrenador
         self.screen.fill((255, 255, 255))  # Fondo blanco
-        physicsRules = vars(self.entrenador.universo.physicsRules).items()
+        physics_rules = vars(self.entrenador.universo.physics_rules).items()
         system_rules = vars(systemRules).items()
+        self.font = pygame.font.Font(None, 20)
         time_label = self.font.render(
             f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
-        time_structure_label = self.font.render(
-            f"Tiempo sin estructura: {self.entrenador.tiempoSinEstructuras}", True, (0, 0, 0))
-        id_label = self.font.render(
-            f"ID: {self.entrenador.universo.id}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
-        self.screen.blit(time_structure_label, (10, 35))
-        self.screen.blit(id_label, (10, 55))
+        claves_mostrar = [
+            'recompensa_actual_generacion',
+            'actual_total_recompensa',
+            'mejor_maxima_recompensa',
+            'generaciones_sin_mejora',
+            'contador_test_poblacion',
+        ]
 
+        for i, clave in enumerate(claves_mostrar):
+            # 'N/A' en caso de que la clave no exista
+            valor = getattr(self.entrenador, clave, 'N/A')
+            label = self.font.render(f"{clave}: {valor}", True, (0, 0, 0))
+            self.screen.blit(label, (10, 25 + i * 20))
+        self.font = pygame.font.Font(None, 18)
         for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, 80 + i * 20))
+            self.screen.blit(label, (6, 135 + i * 18))
 
-        for i, (attribute, value) in enumerate(physicsRules):
+        for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (10, (500 + i * 20)))
+            self.screen.blit(label, (6, (570 + i * 18)))
+
+        # Dibujar el botón de pausa/reanudación
+        pygame.draw.rect(self.screen, self.button_color, self.button_rect)
+        self.screen.blit(self.button_label,
+                         (self.button_rect.x + 10, self.button_rect.y + 10))
 
     def update_configurations(self):
-        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physicsRules).items()):
+        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physics_rules).items()):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(
                 label, (self.screen.get_width() // 2 + 10, 10 + i * 20))
 
 
 class App:
-    def __init__(self):
-        self.entrenador = Entrenador()
-        self.entrenador.iniciarEntrenamiento()
-        self.gridSize = int(len(self.entrenador.universo.nodos) ** 0.5)
+    def __init__(self, entrenador: Entrenador):
+        self.entrenador = entrenador
         self.cellSize = 10
         self.view_offset = [0, 0]
         self.screenSize = [1600, 820]
@@ -62,9 +86,8 @@ class App:
         self.keys_pressed = {
             pygame.K_LEFT: False, pygame.K_RIGHT: False, pygame.K_UP: False, pygame.K_DOWN: False}
         self.zoom_level = 1
-        universe_width = int(self.screenSize[0] * 0.8)  # 80% de la pantalla
-        config_width = self.screenSize[0] - \
-            universe_width  # 20% de la pantalla
+        universe_width = int(self.screenSize[0] * 0.8)
+        config_width = self.screenSize[0] - universe_width
         self.universe_screen = pygame.Surface(
             (universe_width, self.screenSize[1]))
         self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
@@ -72,10 +95,12 @@ class App:
         self.update_surface_dimensions()
 
     def update_surface_dimensions(self):
-        universe_width = int(self.screenSize[0] * 0.8)
-        config_width = self.screenSize[0] - universe_width
-        self.universe_screen = pygame.Surface((universe_width, self.screenSize[1]))
+        # Cambio en la proporción para configuración
+        config_width = int(self.screenSize[0] * 0.3)
+        universe_width = self.screenSize[0] - config_width
         self.config_screen = pygame.Surface((config_width, self.screenSize[1]))
+        self.universe_screen = pygame.Surface(
+            (universe_width, self.screenSize[1]))
         self.config_window.update_screen(self.config_screen)
 
     def run(self):
@@ -83,6 +108,15 @@ class App:
         dragging = False
         while running:
             for event in pygame.event.get():
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.config_window.button_rect.collidepoint((mouse_pos[0], mouse_pos[1])):
+                        self.config_window.paused = not self.config_window.paused
+                        self.config_window.update_button()
+                        if self.config_window.paused:
+                            self.entrenador.pausarEntrenamiento()
+                        else:
+                            self.entrenador.reanudarEntrenamiento()
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -110,7 +144,8 @@ class App:
                     self.view_offset[1] -= dy
                 elif event.type == pygame.VIDEORESIZE:
                     self.screenSize = event.size
-                    self.screen = pygame.display.set_mode(self.screenSize, pygame.RESIZABLE)
+                    self.screen = pygame.display.set_mode(
+                        self.screenSize, pygame.RESIZABLE)
                     self.update_surface_dimensions()
 
             # Desplazamiento continuo con las flechas
@@ -125,50 +160,46 @@ class App:
 
             self.update_grid()
             self.config_window.refresh(self.entrenador)
-            self.screen.blit(self.universe_screen, (0, 0))
-            self.screen.blit(self.config_screen,
-                             (self.universe_screen.get_width(), 0))
+            # Coloca primero la ventana de configuración
+            self.screen.blit(self.config_screen, (0, 0))
+            self.screen.blit(self.universe_screen,
+                             (self.config_screen.get_width(), 0))
             pygame.display.flip()
             # Reducir el delay para un movimiento más suave
-            pygame.time.delay(50)
+            pygame.time.delay(100)
 
         pygame.quit()
 
     def update_grid(self):
-        new_gridSize = int(len(self.entrenador.universo.nodos) ** 0.5)
+        self.universe_screen.fill((0, 0, 0))
 
-        # Si la retícula ha crecido, actualizar la gridSize
-        if new_gridSize != self.gridSize:
-            self.gridSize = new_gridSize
+        cargas = cp.asnumpy(self.entrenador.universo.cargasMatriz)
+        energias = cp.asnumpy(self.entrenador.universo.energiasMatriz)
 
-        self.universe_screen.fill((0, 0, 0))   # Limpiar la pantalla
+        # Ajustar las cargas y energías al rango 0-255
+        min_carga, max_carga = np.min(cargas), np.max(cargas)
+        min_energia, max_energia = np.min(energias), np.max(energias)
+        cargas = ((cargas - min_carga) / (max_carga - min_carga)
+                  * 255).astype(np.uint8)
+        energias = ((energias - min_energia) /
+                    (max_energia - min_energia) * 255).astype(np.uint8)
 
-        for index, nodo in enumerate(self.entrenador.universo.nodos):
+        for index, (carga, energia) in enumerate(zip(cargas.flat, energias.flat)):
             cellSize = self.cellSize * self.zoom_level
-            x = (index % self.gridSize) * cellSize - self.view_offset[0]
-            y = (index // self.gridSize) * cellSize - self.view_offset[1]
+            x = (index % systemRules.FILAS) * cellSize - self.view_offset[0]
+            y = (index // systemRules.COLUMNAS) * \
+                cellSize - self.view_offset[1]
 
-            # Continuar con el siguiente nodo si está fuera de la ventana de visualización
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
                 continue
 
-            if nodo.memoria.energia > self.entrenador.universo.physicsRules.ENERGIA and len(nodo.memoria.relaciones) > systemRules.LIMITE_RELACIONAL:
-                color = (255, 255, 0)
-            else:
-                if nodo.memoria.cargas > 0:
-                    blueComponent = max(
-                        0, min(255, int(255 * nodo.memoria.cargas)))
-                    color = (0, 200, blueComponent)
-                else:
-                    greyComponent = max(
-                        0, min(255, 200 - int(255 * abs(nodo.memoria.cargas))))
-                    color = (greyComponent, greyComponent, greyComponent)
-
-            # Cambia la siguiente línea para dibujar en self.universe_screen en lugar de self.screen
+            color = (energia, carga, carga)
             pygame.draw.rect(self.universe_screen, color,
                              (x, y, cellSize, cellSize))
 
 
 if __name__ == '__main__':
-    app = App()
+    entrenador = Entrenador()
+    entrenador.iniciarEntrenamiento()
+    app = App(entrenador)
     app.run()

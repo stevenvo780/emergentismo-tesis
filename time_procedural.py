@@ -1,118 +1,88 @@
-from random import random
 from typing import List
-from types_universo import NodoInterface, IPhysicsRules, Memoria, Procesos, Relacion, systemRules
-from random import uniform
+from types_universo import PhysicsRules, systemRules, NodoInterface
+import cupy as cp
+import cupy
 
-def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
-    return NodoInterface(
-        id=f"nodo-{i}-{j}",
-        memoria=Memoria(
-            cargas=cargas,
-            energia=energia,
-            edad=0,
-            procesos=Procesos(
-                relacionarNodos=relacionar_nodos,
-                intercambiarCargas=intercambiar_cargas,
-            ),
-            relaciones=[],
-        )
-    )
+device_limit = 32 * 1024**3
+mempool = cp.get_default_memory_pool()
+mempool.set_limit(size=device_limit)
+cupy.cuda.set_allocator(cupy.cuda.MemoryAsyncPool().malloc)
 
+with cp.cuda.Device(0):
+    def calcular_cargas(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
+        interacciones_distancia = calcular_interacciones_distancia(
+            cargas, matriz_distancias, physics_rules)
+        vecinos_vivos = cp.sum(matriz_distancias == 1,
+                               axis=1).reshape(cargas.shape)
 
-def intercambiar_cargas(valores_sistema: IPhysicsRules, nodo_a: NodoInterface, nodo_b: NodoInterface, es_grupo_circular: bool) -> None:
-    carga_compartida = (nodo_a.memoria.cargas + nodo_b.memoria.cargas) / 2
+        nacimiento = (cargas == 0) & (cp.random.rand(*cargas.shape)
+                                      < physics_rules.PROBABILIDAD_VIDA_INICIAL * vecinos_vivos)
+        supervivencia = (cargas != 0) & (cp.random.rand(*cargas.shape) < 1 / (
+            1 + cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - physics_rules.CONSTANTE_HUBBLE))))
+        muerte = ~nacimiento & ~supervivencia
 
-    if es_grupo_circular:
-        carga_compartida = carga_compartida * \
-            (1 - valores_sistema.FACTOR_ESTABILIDAD)
+        cargas[nacimiento] = cp.random.uniform(-1,
+                                               1, cp.sum(nacimiento).item())
+        cargas[muerte] = 0
+        fluctuacion = cp.sin(cargas) * cp.random.uniform(-physics_rules.FLUCTUACION_MAXIMA,
+                                                         physics_rules.FLUCTUACION_MAXIMA, cargas.shape)
 
-    nodo_a.memoria.cargas = carga_compartida
-    nodo_b.memoria.cargas = carga_compartida
+        cargas += interacciones_distancia + fluctuacion
+        return cp.clip(cargas, -systemRules.LIMITE_INTERCAMBIO, systemRules.LIMITE_INTERCAMBIO)
 
-    # Actualizar la carga compartida en la relación
-    for rel in nodo_a.memoria.relaciones:
-        if rel.nodoId == nodo_b.id:
-            rel.cargaCompartida = carga_compartida
+    def calcular_interacciones_distancia(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
+        LONGITUD_DE_DECAY_ESCALADA = 1 + 9 * physics_rules.LONGITUD_DE_DECAY
+        decaimiento = cp.exp(-matriz_distancias / LONGITUD_DE_DECAY_ESCALADA)
+        ruido_distancia = cp.random.uniform(
+            -physics_rules.RUIDO_MAXIMO, physics_rules.RUIDO_MAXIMO, matriz_distancias.shape)
+        return cp.sum(decaimiento * ruido_distancia, axis=1).reshape(cargas.shape)
 
-    for rel in nodo_b.memoria.relaciones:
-        if rel.nodoId == nodo_a.id:
-            rel.cargaCompartida = carga_compartida
+    def calcular_energia(energias: cp.ndarray, cargas: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
+        return cp.where(cp.abs(energias + cargas) > physics_rules.UMBRAL_CARGA, 1, 0)
 
-    nodo_a.memoria.energia = calcular_energia(nodo_a)
-    nodo_b.memoria.energia = calcular_energia(nodo_b)
+    def calcular_distancias_matricial(filas, columnas):
+        x, y = cp.meshgrid(cp.arange(filas), cp.arange(columnas))
+        dx = x[:, None] - x[None, :]
+        dy = y[:, None] - y[None, :]
+        return cp.sqrt(dx ** 2 + dy ** 2)
 
+    def calcular_relaciones_matricial(physics_rules: PhysicsRules, cargas: cp.ndarray, matriz_distancias: cp.ndarray) -> cp.ndarray:
+        mask = matriz_distancias == 1
+        diferencia_cargas = cargas[:, cp.newaxis] - cargas
+        relacion_mask = mask & (cp.abs(diferencia_cargas)
+                                > physics_rules.ENERGIA)
 
-def calcular_energia(nodo: NodoInterface) -> float:
-    energia = 1 - abs(nodo.memoria.cargas)
-    for rel in nodo.memoria.relaciones:
-        energia += abs(rel.cargaCompartida)
-    return min(energia, 1)
+        # Calcula el intercambio de cargas entre nodos vecinos
+        intercambio = physics_rules.FACTOR_ESTABILIDAD * diferencia_cargas
+        intercambio = cp.where(relacion_mask, intercambio, 0)
 
+        # Aplicar el intercambio de cargas a cada nodo
+        intercambio_nodos = cp.sum(intercambio, axis=1)
 
-def calcular_distancia(nodo_a: NodoInterface, nodo_b: NodoInterface) -> float:
-    i_a, j_a = map(int, nodo_a.id.split('-')[1:])
-    i_b, j_b = map(int, nodo_b.id.split('-')[1:])
-    return ((i_a - i_b) ** 2 + (j_a - j_b) ** 2) ** 0.5
+        return intercambio_nodos
 
+    def calcular_entropia_condicional(cargas: cp.ndarray, energias: cp.ndarray, matriz_distancias: cp.ndarray) -> float:
+        vecinos_indices = cp.where(matriz_distancias == 1)
+        cargas_vecinos = cargas[vecinos_indices[0]]
+        energias_vecinos = energias[vecinos_indices[0]]
 
-def relacionar_nodos(valores_sistema: IPhysicsRules, nodo: NodoInterface, vecinos: List[NodoInterface]):
-    if nodo.memoria.energia > valores_sistema.ENERGIA:
-        for vecino in vecinos:
-            if (vecino and
-                vecino.memoria.energia > valores_sistema.ENERGIA and
-                vecino.id != nodo.id and
-                    vecino.id > nodo.id):
-                diferencia_cargas = abs(
-                    nodo.memoria.cargas - vecino.memoria.cargas)
-                distancia = calcular_distancia(nodo, vecino)
-                if distancia > systemRules.DISTANCIA_MAXIMA_RELACION:
-                    continue
+        # Asegurar que los histogramas sumen 1 (probabilidades)
+        n = len(cargas_vecinos)
+        num_bins = 10
 
-                probabilidad_relacion = (
-                    (diferencia_cargas / 2) *
-                    (1 / distancia) *
-                    valores_sistema.FACTOR_RELACION
-                )
+        p_x_y, _, _ = cp.histogram2d(
+            cargas_vecinos.ravel(), energias_vecinos.ravel(), bins=num_bins)
+        p_x_y /= p_x_y.sum()
 
-                if (random() < probabilidad_relacion and
-                    ((nodo.memoria.cargas < 0 and vecino.memoria.cargas > 0) or
-                     (nodo.memoria.cargas > 0 and vecino.memoria.cargas < 0))):
-                    relacion_existente = next(
-                        (rel for rel in nodo.memoria.relaciones if rel.nodoId == vecino.id), None)
-                    if not relacion_existente:
-                        carga_compartida = (
-                            nodo.memoria.cargas + vecino.memoria.cargas) / 2
-                        nodo.memoria.relaciones.append(
-                            Relacion(vecino.id, carga_compartida))
+        p_x = cp.sum(p_x_y, axis=1)
+        p_y = cp.sum(p_x_y, axis=0)
 
-    # Reducir gradualmente la carga compartida y eliminar relaciones con carga cero
-    nodo.memoria.relaciones = [rel for rel in nodo.memoria.relaciones if (
-        abs(rel.cargaCompartida) >= valores_sistema.ENERGIA and nodo.memoria.energia > valores_sistema.ENERGIA)]
+        # Evitar la división por cero y los logaritmos de cero
+        # un pequeño valor para evitar log(0) y divisiones por cero
+        epsilon = 1e-10
+        p_x_y_safe = cp.where(p_x_y > epsilon, p_x_y, epsilon)
+        p_y_safe = cp.where(p_y > epsilon, p_y, epsilon)
 
-    # Reducir gradualmente la carga compartida y eliminar relaciones con carga cero
-    nodo.memoria.relaciones = [rel for rel in nodo.memoria.relaciones if (
-        abs(rel.cargaCompartida) >= valores_sistema.ENERGIA and nodo.memoria.energia > valores_sistema.ENERGIA)]
+        entropia_condicional = -cp.sum(p_x_y * cp.log2(p_x_y_safe / p_y_safe))
 
-
-def expandir_espacio(nodos: List[NodoInterface], valores_sistema: IPhysicsRules) -> List[NodoInterface]:
-    # Añadir filas en la parte inferior
-    for i in range(systemRules.CRECIMIENTO_X):
-        for j in range(systemRules.COLUMNAS):
-            cargas = uniform(-1, 1)
-            energia = 1 - abs(cargas)
-            nodo = crear_nodo(systemRules.FILAS + i, j, cargas, energia)
-            nodos.append(nodo)
-
-    # Añadir columnas a la derecha
-    for i in range(systemRules.FILAS + systemRules.CRECIMIENTO_X):
-        for j in range(systemRules.CRECIMIENTO_Y):
-            cargas = uniform(-1, 1)
-            energia = 1 - abs(cargas)
-            nodo = crear_nodo(i, systemRules.COLUMNAS + j, cargas, energia)
-            nodos.append(nodo)
-
-    # Actualizar los valores del sistema
-    systemRules.FILAS += systemRules.CRECIMIENTO_X
-    systemRules.COLUMNAS += systemRules.CRECIMIENTO_Y
-
-    return nodos
+        return float(entropia_condicional)

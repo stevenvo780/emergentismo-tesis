@@ -1,107 +1,84 @@
-from typing import List, Callable
-
-
-class IPhysicsRules:
-    FILAS: int
-    COLUMNAS: int
-    PROBABILIDAD_VIDA_INICIAL: float
-    REDUCCION_CARGA: float
-    UMBRAL_CARGA: float
-    FACTOR_ESTABILIDAD: float
-    ENERGIA: float
-    PROBABILIDAD_TRANSICION: float
-    FLUCTUACION_MAXIMA: float
-    PROBABILIDAD_TUNEL: float
-    FACTOR_RELACION: int
-
-
-class PhysicsRules(IPhysicsRules):
+class PhysicsRules():
     def __init__(self,
                  PROBABILIDAD_VIDA_INICIAL=0.99999,
                  UMBRAL_CARGA=0.1,
-                 ENERGIA=0.01,
-                 PROBABILIDAD_TRANSICION=0.01,
+                 ENERGIA=0.00001,
                  FLUCTUACION_MAXIMA=0.01,
-                 PROBABILIDAD_TUNEL=0.01,
-                 FACTOR_ESTABILIDAD=0.2,
-                 FACTOR_RELACION=10
+                 FACTOR_ESTABILIDAD=0.1,
+                 CONSTANTE_HUBBLE=0.5,
+                 LONGITUD_DE_DECAY=0.5,
+                 RUIDO_MAXIMO=0.1,
                  ):
         self.PROBABILIDAD_VIDA_INICIAL = PROBABILIDAD_VIDA_INICIAL
         self.UMBRAL_CARGA = UMBRAL_CARGA
-        self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
         self.ENERGIA = ENERGIA
-        self.PROBABILIDAD_TRANSICION = PROBABILIDAD_TRANSICION
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
-        self.PROBABILIDAD_TUNEL = PROBABILIDAD_TUNEL
-        self.FACTOR_RELACION = FACTOR_RELACION
+        self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
+        self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
+        self.LONGITUD_DE_DECAY = LONGITUD_DE_DECAY
+        self.RUIDO_MAXIMO = RUIDO_MAXIMO
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
         return '\n'.join(attributes)
 
 
-class ISystemRules:
-    FILAS = int,
-    COLUMNAS = int,
-    INTERVALO_ENTRENAMIENTO = int
-    PUNTAGE_MINIMO_REINICIO = int
-    LIMITE_RELACIONAL = int
-    DISTANCIA_MAXIMA_RELACION = int
-    FACTOR_RELACION_LIMIT = int
-    CRECIMIENTO_X = int
-    CRECIMIENTO_Y = int
-    NEURONAL_FACTOR = float
-    NEURONAS_CANTIDAD = float
-    TASA_APRENDIZAJE = float
-    NUM_THREADS = int
-    MEJOR_PUNTAJE = int
-
-
-class SystemRules(ISystemRules):
+class SystemRules:
     def __init__(self,
+                 # GRID
                  GIRD_SIZE=100,
                  FILAS=100,
                  COLUMNAS=100,
-                 INTERVALO_ENTRENAMIENTO=50,
-                 PUNTAGE_MINIMO_REINICIO=20000,
-                 LIMITE_RELACIONAL=3,
-                 DISTANCIA_MAXIMA_RELACION=6,
-                 RECOMPENSA_EXTRA_CERRADA=10000,
-                 RECOMPENSA_POR_RELACION=0.1,
-                 PENALIZACION_POR_RELACIONES=1000,
-                 UMBRAL_PROPORCION=0.1,
-                 UMBRAL_CONJUNTOS_CERRADOS=1,
-                 NEURONAL_FACTOR_INCREASE=0.05,
-                 FACTOR_RELACION_LIMIT=10,
                  CRECIMIENTO_X=2,
                  CRECIMIENTO_Y=2,
-                 NEURONAL_FACTOR=0.05,
-                 NEURONAS_CANTIDAD=8,
-                 TASA_APRENDIZAJE=0.5,
-                 NUM_THREADS=12,
-                 MEJOR_PUNTAJE=0,
+
+                 # Red evolutiva
+                 MEJOR_TOTAL_RECOMPENSA=0,
+                 # SIEMPRE DEBE SER PAR
+                 POPULATION_SIZE=6,
+                 NEURONAS_PROFUNDIDAD=24,
+                 NEURONAS_DENSIDAD_ENTRADA=12,
+                 INTERVALO_ENTRENAMIENTO=1000,
+                 FACTOR_ENTROPIA=10,
+                 VARIACION_NEURONAL_GRANDE=0.001,
+                 VARIACION_NEURONAL_PEQUEÑA=0.0005,
+                 TASA_APRENDIZAJE=0.7,
+                 GENERACIONES_PARA_AUMENTO_MUTACION=10,
+                 GENERACIONES_PARA_REINICIO=100,
+                 GENERACIONES_PARA_TERMINAR=1000,
+
+                 # Configuraciones para evitar errores
+                 LIMITE_INTERCAMBIO=1,
+                 MEMORIA_POR_FILA=1048,
+                 FILAS_POR_MB=200,
+                 CONSTANTE_HUBBLE=500,
                  ):
+        # GRID
         self.GIRD_SIZE = GIRD_SIZE
         self.FILAS = FILAS
         self.COLUMNAS = COLUMNAS
-        self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO
-        self.PUNTAGE_MINIMO_REINICIO = PUNTAGE_MINIMO_REINICIO
-        self.LIMITE_RELACIONAL = LIMITE_RELACIONAL
-        self.DISTANCIA_MAXIMA_RELACION = DISTANCIA_MAXIMA_RELACION
-        self.RECOMPENSA_EXTRA_CERRADA = RECOMPENSA_EXTRA_CERRADA
-        self.RECOMPENSA_POR_RELACION = RECOMPENSA_POR_RELACION
-        self.PENALIZACION_POR_RELACIONES = PENALIZACION_POR_RELACIONES
-        self.UMBRAL_CONJUNTOS_CERRADOS = UMBRAL_CONJUNTOS_CERRADOS
-        self.NEURONAL_FACTOR_INCREASE = NEURONAL_FACTOR_INCREASE
-        self.FACTOR_RELACION_LIMIT = FACTOR_RELACION_LIMIT
         self.CRECIMIENTO_X = CRECIMIENTO_X
         self.CRECIMIENTO_Y = CRECIMIENTO_Y
-        self.NEURONAL_FACTOR = NEURONAL_FACTOR
-        self.NEURONAS_CANTIDAD = NEURONAS_CANTIDAD
+
+        # Red evolutiva
+        self.MEJOR_TOTAL_RECOMPENSA = MEJOR_TOTAL_RECOMPENSA
+        self.POPULATION_SIZE = POPULATION_SIZE
+        self.NEURONAS_PROFUNDIDAD = NEURONAS_PROFUNDIDAD
+        self.NEURONAS_DENSIDAD_ENTRADA = NEURONAS_DENSIDAD_ENTRADA
+        self.INTERVALO_ENTRENAMIENTO = INTERVALO_ENTRENAMIENTO
+        self.FACTOR_ENTROPIA = FACTOR_ENTROPIA
+        self.VARIACION_NEURONAL_GRANDE = VARIACION_NEURONAL_GRANDE
+        self.VARIACION_NEURONAL_PEQUEÑA = VARIACION_NEURONAL_PEQUEÑA
         self.TASA_APRENDIZAJE = TASA_APRENDIZAJE
-        self.NUM_THREADS = NUM_THREADS
-        self.MEJOR_PUNTAJE = MEJOR_PUNTAJE
-        self.UMBRAL_PROPORCION = UMBRAL_PROPORCION
+        self.GENERACIONES_PARA_AUMENTO_MUTACION = GENERACIONES_PARA_AUMENTO_MUTACION
+        self.GENERACIONES_PARA_TERMINAR = GENERACIONES_PARA_TERMINAR
+
+        # Configuraciones para evitar errores
+        self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO
+        self.GENERACIONES_PARA_REINICIO = GENERACIONES_PARA_REINICIO
+        self.MEMORIA_POR_FILA = MEMORIA_POR_FILA
+        self.FILAS_POR_MB = FILAS_POR_MB
+        self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
 
     def __str__(self):
         attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
@@ -109,25 +86,11 @@ class SystemRules(ISystemRules):
 
 
 class NodoInterface:
-    def __init__(self, id: str, memoria: 'Memoria'):
+    def __init__(self, id: str, cargas: float, energia: float):
         self.id = id
-        self.memoria = memoria
-
-
-class Memoria:
-    def __init__(self, cargas: float, energia: float, edad: int, procesos: 'Procesos', relaciones: List['Relacion']):
         self.cargas = cargas
         self.energia = energia
-        self.edad = edad
-        self.procesos = procesos
-        self.relaciones = relaciones
-
-
-class Procesos:
-    def __init__(self, relacionarNodos: Callable[['IPhysicsRules', 'NodoInterface', List['NodoInterface']], None],
-                 intercambiarCargas: Callable[['IPhysicsRules', 'NodoInterface', 'NodoInterface', bool], None]):
-        self.relacionarNodos = relacionarNodos
-        self.intercambiarCargas = intercambiarCargas
+        self.relaciones = []
 
 
 class Relacion:
