@@ -3,12 +3,8 @@ from types_universo import PhysicsRules, systemRules, NodoInterface
 import cupy as cp
 import cupy
 
-# Configurar el límite de la memoria del dispositivo (por ejemplo, 4 GiB)
 device_limit = 32 * 1024**3
-
-# Configurar el gestor de memoria de CuPy
 mempool = cp.get_default_memory_pool()
-
 mempool.set_limit(size=device_limit)
 cupy.cuda.set_allocator(cupy.cuda.MemoryAsyncPool().malloc)
 
@@ -35,14 +31,20 @@ with cp.cuda.Device(0):
         return cp.clip(cargas, -systemRules.LIMITE_INTERCAMBIO, systemRules.LIMITE_INTERCAMBIO)
 
     def calcular_interacciones_distancia(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
-        decaimiento = cp.exp(-matriz_distancias /
-                             physics_rules.LONGITUD_DE_DECAY)
+        LONGITUD_DE_DECAY_ESCALADA = 1 + 9 * physics_rules.LONGITUD_DE_DECAY
+        decaimiento = cp.exp(-matriz_distancias / LONGITUD_DE_DECAY_ESCALADA)
         ruido_distancia = cp.random.uniform(
             -physics_rules.RUIDO_MAXIMO, physics_rules.RUIDO_MAXIMO, matriz_distancias.shape)
         return cp.sum(decaimiento * ruido_distancia, axis=1).reshape(cargas.shape)
 
     def calcular_energia(energias: cp.ndarray, cargas: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
         return cp.where(cp.abs(energias + cargas) > physics_rules.UMBRAL_CARGA, 1, 0)
+
+    def calcular_distancias_matricial(filas, columnas):
+        x, y = cp.meshgrid(cp.arange(filas), cp.arange(columnas))
+        dx = x[:, None] - x[None, :]
+        dy = y[:, None] - y[None, :]
+        return cp.sqrt(dx ** 2 + dy ** 2)
 
     def calcular_relaciones_matricial(physics_rules: PhysicsRules, cargas: cp.ndarray, matriz_distancias: cp.ndarray) -> cp.ndarray:
         mask = matriz_distancias == 1
@@ -58,12 +60,6 @@ with cp.cuda.Device(0):
         intercambio_nodos = cp.sum(intercambio, axis=1)
 
         return intercambio_nodos
-
-    def calcular_distancias_matricial(filas, columnas):
-        x, y = cp.meshgrid(cp.arange(filas), cp.arange(columnas))
-        dx = x[:, None] - x[None, :]
-        dy = y[:, None] - y[None, :]
-        return cp.sqrt(dx ** 2 + dy ** 2)
 
     def calcular_entropia_condicional(cargas: cp.ndarray, energias: cp.ndarray, matriz_distancias: cp.ndarray) -> float:
         vecinos_indices = cp.where(matriz_distancias == 1)

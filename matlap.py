@@ -120,10 +120,6 @@ def load_cargas():
     load_and_plot('cargasMatriz.json', plot_matrix, 'Cargas Matriz')
 
 
-def load_distancias():
-    load_and_plot('matriz_distancias.json', plot_matrix, 'Matriz Distancias')
-
-
 def load_relaciones(start_row=0, start_col=0):
     progress_bar = ttk.Progressbar(
         root, orient='horizontal', mode='indeterminate')
@@ -170,10 +166,6 @@ energias_button.pack(pady=5)
 cargas_button = tk.Button(
     root, text="Mostrar Cargas Matriz", command=load_cargas)
 cargas_button.pack(pady=5)
-
-distancias_button = tk.Button(
-    root, text="Mostrar Matriz Distancias", command=load_distancias)
-distancias_button.pack(pady=5)
 
 relaciones_button = tk.Button(
     root, text="Mostrar Matriz Relaciones", command=open_relaciones_window)
