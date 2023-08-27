@@ -51,7 +51,7 @@ class Entrenador:
                         nuevos_valores = []
                         for clave in self.claves_parametros:
                             nuevos_valores.append(self.predecir_valores(
-                                self.poblaciones[clave][self.contador_test_poblacion], clave))
+                                self.poblaciones[clave][self.contador_test_poblacion]))
                             self.recompensas_por_clave[clave].append(
                                 recompensaLast)
                         self.contador_test_poblacion += 1
@@ -77,7 +77,8 @@ class Entrenador:
         max_recompensas: List[float] = []
         for clave in self.claves_parametros:
             self.evolve_population(clave)
-            self.actual_total_recompensa += sum(self.recompensas_por_clave[clave])
+            self.actual_total_recompensa += sum(
+                self.recompensas_por_clave[clave])
             max_recompensas.append(max(self.recompensas_por_clave[clave]))
         max_recompensa = max(max_recompensas)
         if max_recompensa > self.mejor_maxima_recompensa:
@@ -98,6 +99,9 @@ class Entrenador:
             systemRules.VARIACION_NEURONAL_GRANDE *= 2.05
             systemRules.VARIACION_NEURONAL_PEQUEÑA *= 1.05
 
+        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_REINICIO:
+            self.reiniciar_poblacion()
+
     def mutate(self, neural_network):
         if self.generaciones_sin_mejora % systemRules.GENERACIONES_PARA_AUMENTO_MUTACION:
             mutation_rate = systemRules.VARIACION_NEURONAL_GRANDE
@@ -115,8 +119,6 @@ class Entrenador:
         nueva_poblacion = self.crear_nueva_poblacion(clave)
         self.aplicar_mutaciones(nueva_poblacion)
         self.mantener_elite(clave, nueva_poblacion, num_elite=2)
-        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_REINICIO:
-            self.reiniciar_poblacion()
 
     def crossover(self, parent1, parent2):
         child1 = self.crear_red_neuronal()
@@ -143,9 +145,9 @@ class Entrenador:
             child2.set_weights(child2_weights)
         return child1, child2
 
-    def predecir_valores(self, neural_network, clave):
-        input_data = np.array(
-            [getattr(self.universo.physics_rules, clave)], dtype=float)
+    def predecir_valores(self, neural_network):
+        input_data = np.array([len(self.claves_parametros)],
+                              dtype=float)
         nuevos_valor = neural_network.predict(
             input_data.reshape(1, -1)).flatten()[0]
         return nuevos_valor
@@ -274,7 +276,7 @@ class Entrenador:
             mejores_nuevos_valores = []
             for clave in self.claves_parametros:
                 mejores_nuevos_valores.append(self.predecir_valores(
-                    self.poblaciones[clave][self.contador_test_poblacion-1], clave))
+                    self.poblaciones[clave][self.contador_test_poblacion-1]))
         else:
             mejores_nuevos_valores = np.random.rand(
                 systemRules.POPULATION_SIZE)

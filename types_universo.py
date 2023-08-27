@@ -42,7 +42,7 @@ class SystemRules:
                  FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.001,
                  VARIACION_NEURONAL_PEQUEÑA=0.0005,
-                 TASA_APRENDIZAJE=0.001,
+                 TASA_APRENDIZAJE=0.7,
                  GENERACIONES_PARA_AUMENTO_MUTACION=10,
                  GENERACIONES_PARA_REINICIO=100,
                  GENERACIONES_PARA_TERMINAR=1000,
