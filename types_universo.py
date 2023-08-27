@@ -33,7 +33,7 @@ class SystemRules:
                  CRECIMIENTO_Y=2,
 
                  # Red evolutiva
-                 MEJOR_RECOMPENSA=0,
+                 MEJOR_TOTAL_RECOMPENSA=0,
                  # SIEMPRE DEBE SER PAR
                  POPULATION_SIZE=6,
                  NEURONAS_PROFUNDIDAD=24,
@@ -61,7 +61,7 @@ class SystemRules:
         self.CRECIMIENTO_Y = CRECIMIENTO_Y
 
         # Red evolutiva
-        self.MEJOR_RECOMPENSA = MEJOR_RECOMPENSA
+        self.MEJOR_TOTAL_RECOMPENSA = MEJOR_TOTAL_RECOMPENSA
         self.POPULATION_SIZE = POPULATION_SIZE
         self.NEURONAS_PROFUNDIDAD = NEURONAS_PROFUNDIDAD
         self.NEURONAS_DENSIDAD_ENTRADA = NEURONAS_DENSIDAD_ENTRADA

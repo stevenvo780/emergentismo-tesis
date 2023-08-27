@@ -11,14 +11,15 @@ import json
 import time
 import threading
 import os
+from typing import List
 lock_guardar = Lock()
 
 
 class Entrenador:
     def __init__(self):
         self.lock = Lock()
-        self.mejor_recompensa = float('-inf')
-        self.total_recompensa = 0
+        self.mejor_maxima_recompensa: float = 0.0
+        self.actual_total_recompensa = 0
         self.generaciones_sin_mejora = 0
         self.universo = Universo()
         self.universo.tiempo = 1
@@ -33,7 +34,7 @@ class Entrenador:
                                        for _ in range(systemRules.POPULATION_SIZE)]
         self.cargar_poblacion()
         self.pausado = False
-        self.recompensa = 0
+        self.recompensa_actual_generacion = 0
         self.recompensas_por_clave = {clave: []
                                       for clave in self.claves_parametros}
         self.contador_test_poblacion = 0
@@ -46,7 +47,7 @@ class Entrenador:
                 if self.contador_test_poblacion <= systemRules.POPULATION_SIZE and self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0:
                     recompensaLast = calcular_entropia_condicional(
                         self.universo.cargasMatriz, self.universo.energiasMatriz, self.universo.matriz_distancias) * systemRules.FACTOR_ENTROPIA
-                    if self.recompensa < recompensaLast:
+                    if self.recompensa_actual_generacion < recompensaLast:
                         nuevos_valores = []
                         for clave in self.claves_parametros:
                             nuevos_valores.append(self.predecir_valores(
@@ -55,7 +56,7 @@ class Entrenador:
                                 recompensaLast)
                         self.contador_test_poblacion += 1
                         self.reiniciarUniverso(nuevos_valores)
-                    self.recompensa = recompensaLast
+                    self.recompensa_actual_generacion = recompensaLast
                 elif self.contador_test_poblacion >= systemRules.POPULATION_SIZE:
                     with lock_guardar:
                         thread = threading.Thread(target=save_matrices_to_json, args=(
@@ -73,13 +74,21 @@ class Entrenador:
                 time.sleep(1)
 
     def entrenar(self):
-        self.total_recompensa = 0
+        max_recompensas: List[float] = []
         for clave in self.claves_parametros:
             self.evolve_population(clave)
-            self.total_recompensa += sum(self.recompensas_por_clave[clave])
-
-        if self.total_recompensa > systemRules.MEJOR_RECOMPENSA:
-            systemRules.MEJOR_RECOMPENSA = self.total_recompensa
+            self.actual_total_recompensa += sum(self.recompensas_por_clave[clave])
+            max_recompensas.append(max(self.recompensas_por_clave[clave]))
+        max_recompensa = max(max_recompensas)
+        if max_recompensa > self.mejor_maxima_recompensa:
+            self.mejor_maxima_recompensa = max_recompensa
+            self.generaciones_sin_mejora = 0
+            systemRules.VARIACION_NEURONAL_GRANDE /= 1.05
+            systemRules.VARIACION_NEURONAL_PEQUEÑA /= 0.5
+        else:
+            self.generaciones_sin_mejora += 1
+        if self.actual_total_recompensa > systemRules.MEJOR_TOTAL_RECOMPENSA:
+            systemRules.MEJOR_TOTAL_RECOMPENSA = self.actual_total_recompensa
             systemRules.VARIACION_NEURONAL_GRANDE /= 2.05
             systemRules.VARIACION_NEURONAL_PEQUEÑA /= 1.05
             self.guardar_mejor_puntaje()
@@ -105,7 +114,6 @@ class Entrenador:
     def evolve_population(self, clave):
         nueva_poblacion = self.crear_nueva_poblacion(clave)
         self.aplicar_mutaciones(nueva_poblacion)
-        self.actualizar_generacion(self.recompensas_por_clave[clave])
         self.mantener_elite(clave, nueva_poblacion, num_elite=2)
         if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_REINICIO:
             self.reiniciar_poblacion()
@@ -147,16 +155,6 @@ class Entrenador:
             if random.random() < systemRules.TASA_APRENDIZAJE:
                 self.mutate(nn)
 
-    def actualizar_generacion(self, recompensas):
-        max_recompensa = max(recompensas)
-        if max_recompensa > self.mejor_recompensa:
-            self.mejor_recompensa = max_recompensa
-            self.generaciones_sin_mejora = 0
-            systemRules.VARIACION_NEURONAL_GRANDE /= 1.05
-            systemRules.VARIACION_NEURONAL_PEQUEÑA /= 0.5
-        else:
-            self.generaciones_sin_mejora += 1
-
     def mantener_elite(self, clave, nueva_poblacion, num_elite):
         sorted_indices = np.argsort(self.recompensas_por_clave[clave])[::-1]
         elite_indices = sorted_indices[:num_elite]
@@ -195,7 +193,7 @@ class Entrenador:
 
     def reiniciar_poblacion(self):
         self.generaciones_sin_mejora = 0
-        self.mejor_recompensa = float('-inf')
+        self.mejor_maxima_recompensa = float('-inf')
         for clave in self.claves_parametros:
             self.poblaciones[clave] = [self.crear_red_neuronal()
                                        for _ in range(systemRules.POPULATION_SIZE)]
@@ -213,15 +211,15 @@ class Entrenador:
         try:
             with open('system_rules.json', 'r') as file:
                 rules = json.load(file)
-                self.mejor_recompensa = rules.get(
-                    "MEJOR_RECOMPENSA", float('-inf'))
+                self.mejor_maxima_recompensa = rules.get(
+                    "MEJOR_TOTAL_RECOMPENSA", float('-inf'))
         except (FileNotFoundError, json.JSONDecodeError):
             self.guardar_mejor_puntaje()
 
     def guardar_mejor_puntaje(self):
         rules = {key: getattr(systemRules, key) for key in dir(
             systemRules) if not key.startswith('__')}
-        rules["MEJOR_RECOMPENSA"] = self.mejor_recompensa
+        rules["MEJOR_TOTAL_RECOMPENSA"] = self.mejor_maxima_recompensa
         with open('system_rules.json', 'w') as file:
             json.dump(rules, file)
 
