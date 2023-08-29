@@ -1,5 +1,5 @@
 from typing import List
-from types_universo import PhysicsRules, systemRules, NodoInterface
+from types_universo import PhysicsRules, neuronalRules, NodoInterface
 import cupy as cp
 import cupy
 
@@ -28,7 +28,7 @@ with cp.cuda.Device(0):
                                                          physics_rules.FLUCTUACION_MAXIMA, cargas.shape)
 
         cargas += interacciones_distancia + fluctuacion
-        return cp.clip(cargas, -systemRules.LIMITE_INTERCAMBIO, systemRules.LIMITE_INTERCAMBIO)
+        return cp.clip(cargas, -neuronalRules.LIMITE_INTERCAMBIO, neuronalRules.LIMITE_INTERCAMBIO)
 
     def calcular_interacciones_distancia(cargas: cp.ndarray, matriz_distancias: cp.ndarray, physics_rules: PhysicsRules) -> cp.ndarray:
         LONGITUD_DE_DECAY_ESCALADA = 1 + 9 * physics_rules.LONGITUD_DE_DECAY

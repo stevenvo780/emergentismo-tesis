@@ -23,25 +23,37 @@ class PhysicsRules():
         return '\n'.join(attributes)
 
 
-class SystemRules:
+class ProceduralRules:
     def __init__(self,
-                 # GRID
                  GIRD_SIZE=100,
                  FILAS=100,
                  COLUMNAS=100,
                  CRECIMIENTO_X=2,
                  CRECIMIENTO_Y=2,
+                 ):
+        self.GIRD_SIZE = GIRD_SIZE
+        self.FILAS = FILAS
+        self.COLUMNAS = COLUMNAS
+        self.CRECIMIENTO_X = CRECIMIENTO_X
+        self.CRECIMIENTO_Y = CRECIMIENTO_Y
 
+    def __str__(self):
+        attributes = [f"{attr}: {value}" for attr, value in vars(self).items()]
+        return '\n'.join(attributes)
+
+
+class NeuronalRules:
+    def __init__(self,
                  # Red evolutiva
                  MEJOR_TOTAL_RECOMPENSA=0,
                  # SIEMPRE DEBE SER PAR
                  POPULATION_SIZE=6,
                  NEURONAS_PROFUNDIDAD=24,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=1000,
+                 INTERVALO_ENTRENAMIENTO=500,
                  FACTOR_ENTROPIA=10,
-                 VARIACION_NEURONAL_GRANDE=0.001,
-                 VARIACION_NEURONAL_PEQUEÑA=0.0005,
+                 VARIACION_NEURONAL_GRANDE=0.1,
+                 VARIACION_NEURONAL_PEQUEÑA=0.005,
                  TASA_APRENDIZAJE=0.7,
                  GENERACIONES_PARA_AUMENTO_MUTACION=10,
                  GENERACIONES_PARA_REINICIO=100,
@@ -53,12 +65,6 @@ class SystemRules:
                  FILAS_POR_MB=200,
                  CONSTANTE_HUBBLE=500,
                  ):
-        # GRID
-        self.GIRD_SIZE = GIRD_SIZE
-        self.FILAS = FILAS
-        self.COLUMNAS = COLUMNAS
-        self.CRECIMIENTO_X = CRECIMIENTO_X
-        self.CRECIMIENTO_Y = CRECIMIENTO_Y
 
         # Red evolutiva
         self.MEJOR_TOTAL_RECOMPENSA = MEJOR_TOTAL_RECOMPENSA
@@ -99,4 +105,11 @@ class Relacion:
         self.cargaCompartida = cargaCompartida
 
 
-systemRules = SystemRules()
+def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
+    return NodoInterface(
+        id=f"nodo-{i}-{j}",
+        cargas=cargas,
+        energia=energia,
+    )
+    
+neuronalRules = NeuronalRules()
