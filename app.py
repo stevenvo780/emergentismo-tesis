@@ -1,7 +1,7 @@
 import time
 import pygame
 from entrenador import Entrenador
-from types_universo import systemRules
+from types_universo import neuronalRules
 import cupy as cp
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
@@ -14,9 +14,11 @@ class ConfigWindow:
         self.screen = screen
         self.button_color = (50, 200, 50)
         self.text_color = (255, 255, 255)
-        self.button_font = pygame.font.Font(None, 36)
-        # Puedes ajustar la posición y tamaño del botón
-        self.button_rect = pygame.Rect(300, 10, 100, 50)
+        self.button_font = pygame.font.Font(None, 26)
+        self.button_rect = pygame.Rect(340, 130, 60, 30)
+        self.exit_button_rect = pygame.Rect(340, 190, 60, 30)
+        self.exit_button_label = self.button_font.render(
+            "Salir", True, self.text_color)
         self.paused = False
         self.update_button()
 
@@ -31,13 +33,23 @@ class ConfigWindow:
         self.update_configurations()
 
     def refresh(self, entrenador: Entrenador):
+        see_universo = {}
+        try:
+            self.entrenador.universos[0]
+            universo_max = max(self.entrenador.universos, key=lambda u: u.tiempo)
+            see_universo = universo_max
+        except IndexError:
+            return
         self.entrenador = entrenador
         self.screen.fill((255, 255, 255))  # Fondo blanco
-        physics_rules = vars(self.entrenador.universo.physics_rules).items()
-        system_rules = vars(systemRules).items()
+        procedural_rules = vars(
+            see_universo.procedural_rules).items()
+        physics_rules = vars(
+            see_universo.physics_rules).items()
+        system_rules = vars(neuronalRules).items()
         self.font = pygame.font.Font(None, 20)
         time_label = self.font.render(
-            f"Tiempo: {self.entrenador.universo.tiempo}", True, (0, 0, 0))
+            f"Tiempo: {see_universo.tiempo}", True, (0, 0, 0))
 
         self.screen.blit(time_label, (10, 10))
         claves_mostrar = [
@@ -45,7 +57,6 @@ class ConfigWindow:
             'actual_total_recompensa',
             'mejor_maxima_recompensa',
             'generaciones_sin_mejora',
-            'contador_test_poblacion',
         ]
 
         for i, clave in enumerate(claves_mostrar):
@@ -56,19 +67,35 @@ class ConfigWindow:
         self.font = pygame.font.Font(None, 18)
         for i, (attribute, value) in enumerate(system_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (6, 135 + i * 18))
+            self.screen.blit(label, (6, 120 + i * 18))
+
+        for i, (attribute, value) in enumerate(procedural_rules):
+            label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
+            self.screen.blit(label, (6, (410 + i * 18)))
 
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(label, (6, (570 + i * 18)))
 
-        # Dibujar el botón de pausa/reanudación
+        # Dibujar el botón de pausa/reanudación (ya existente)
         pygame.draw.rect(self.screen, self.button_color, self.button_rect)
         self.screen.blit(self.button_label,
                          (self.button_rect.x + 10, self.button_rect.y + 10))
 
+        # Dibujar el nuevo botón "Salir"
+        pygame.draw.rect(self.screen, self.button_color, self.exit_button_rect)
+        self.screen.blit(self.exit_button_label,
+                         (self.exit_button_rect.x + 10, self.exit_button_rect.y + 10))
+
     def update_configurations(self):
-        for i, (attribute, value) in enumerate(vars(self.entrenador.universo.physics_rules).items()):
+        see_universo = {}
+        try:
+            self.entrenador.universos[0]
+            universo_max = max(self.entrenador.universos, key=lambda u: u.tiempo)
+            see_universo = universo_max
+        except IndexError:
+            return
+        for i, (attribute, value) in enumerate(vars(see_universo.physics_rules).items()):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
             self.screen.blit(
                 label, (self.screen.get_width() // 2 + 10, 10 + i * 20))
@@ -117,6 +144,12 @@ class App:
                             self.entrenador.pausarEntrenamiento()
                         else:
                             self.entrenador.reanudarEntrenamiento()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if self.config_window.exit_button_rect.collidepoint((mouse_pos[0], mouse_pos[1])):
+                        self.config_window.paused = not self.config_window.paused
+                        self.entrenador.run = False
+                        running = False
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
@@ -147,7 +180,6 @@ class App:
                     self.screen = pygame.display.set_mode(
                         self.screenSize, pygame.RESIZABLE)
                     self.update_surface_dimensions()
-
             # Desplazamiento continuo con las flechas
             if self.keys_pressed[pygame.K_LEFT]:
                 self.view_offset[0] -= self.cellSize
@@ -172,9 +204,16 @@ class App:
 
     def update_grid(self):
         self.universe_screen.fill((0, 0, 0))
+        see_universo = {}
+        try:
+            self.entrenador.universos[0]
+            universo_max = max(self.entrenador.universos, key=lambda u: u.tiempo)
+            see_universo = universo_max
+        except IndexError:
+            return
 
-        cargas = cp.asnumpy(self.entrenador.universo.cargasMatriz)
-        energias = cp.asnumpy(self.entrenador.universo.energiasMatriz)
+        cargas = cp.asnumpy(see_universo.cargasMatriz)
+        energias = cp.asnumpy(see_universo.energiasMatriz)
 
         # Ajustar las cargas y energías al rango 0-255
         min_carga, max_carga = np.min(cargas), np.max(cargas)
@@ -186,8 +225,9 @@ class App:
 
         for index, (carga, energia) in enumerate(zip(cargas.flat, energias.flat)):
             cellSize = self.cellSize * self.zoom_level
-            x = (index % systemRules.FILAS) * cellSize - self.view_offset[0]
-            y = (index // systemRules.COLUMNAS) * \
+            x = (
+                index % see_universo.procedural_rules.FILAS) * cellSize - self.view_offset[0]
+            y = (index // see_universo.procedural_rules.COLUMNAS) * \
                 cellSize - self.view_offset[1]
 
             if x + self.cellSize < 0 or x > self.universe_screen.get_width() or y + self.cellSize < 0 or y > self.screenSize[1]:
@@ -201,5 +241,7 @@ class App:
 if __name__ == '__main__':
     entrenador = Entrenador()
     entrenador.iniciarEntrenamiento()
+    while len(entrenador.universos) == 0:
+        time.sleep(1)
     app = App(entrenador)
     app.run()

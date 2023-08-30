@@ -1,123 +1,140 @@
 import numpy as np
 from universo import Universo
-from types_universo import PhysicsRules, systemRules
+from types_universo import PhysicsRules, ProceduralRules, neuronalRules
 from time_procedural import calcular_entropia_condicional
 import random
 from threading import Thread, Lock
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.initializers import RandomUniform  # type: ignore
+from keras.initializers import RandomUniform, he_normal, glorot_uniform  # type: ignore
 import json
 import time
-import threading
 import os
-from typing import List
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 lock_guardar = Lock()
 
 
 class Entrenador:
     def __init__(self):
-        self.lock = Lock()
         self.mejor_maxima_recompensa: float = 0.0
         self.actual_total_recompensa = 0
         self.generaciones_sin_mejora = 0
-        self.universo = Universo()
-        self.universo.tiempo = 1
+        self.universos = []
+        temp_instance = PhysicsRules()
         self.claves_parametros = [key for key in vars(
-            self.universo.physics_rules).keys()]
+            temp_instance).keys() if not key.startswith("__")]
+        del temp_instance
         self.elite = []
-        self.cargar_mejor_universo()
         self.cargar_mejor_puntaje()
-        self.poblaciones = {}
-        for clave in self.claves_parametros:
-            self.poblaciones[clave] = [self.crear_red_neuronal()
-                                       for _ in range(systemRules.POPULATION_SIZE)]
+        self.poblacion = [self.crear_red_neuronal()
+                          for _ in range(neuronalRules.POPULATION_SIZE)]
         self.cargar_poblacion()
         self.pausado = False
         self.recompensa_actual_generacion = 0
-        self.recompensas_por_clave = {clave: []
-                                      for clave in self.claves_parametros}
-        self.contador_test_poblacion = 0
+        self.recompensas = []
+        self.run = True
+
+    def run_universo(self, neural_network):
+        try:
+            procedural_rules = ProceduralRules()
+            nuevos_valores = self.predecir_valores(neural_network)
+            physics_rules = PhysicsRules()
+            for i, clave in enumerate(self.claves_parametros):
+                valor = nuevos_valores[i]
+                setattr(physics_rules, clave, valor)
+            universo = Universo(physics_rules, procedural_rules)
+            universo.tiempo = 1
+
+            self.universos.append(universo)
+
+            recompensa = 0
+            recompensa_last = 0
+            no_hay_mejora = True
+            while no_hay_mejora == True:
+                universo.tiempo += 1
+                universo.next()
+                if universo.tiempo % neuronalRules.INTERVALO_ENTRENAMIENTO == 0:
+                    recompensa += calcular_entropia_condicional(
+                        universo.cargasMatriz, universo.energiasMatriz, universo.matriz_distancias
+                    ) * neuronalRules.FACTOR_ENTROPIA
+                    if recompensa / 2 < recompensa_last:
+                        no_hay_mejora = False
+                    else:
+                        recompensa_last = recompensa
+
+            return universo, recompensa
+        except Exception as e:
+            print(f"Excepción capturada en run_universo: {e}")
+            traceback.print_exc()
+            return None, -1
 
     def big_bang(self):
-        while True:
+        while self.run:
             if not self.pausado:
-                self.universo.next()
-                self.universo.tiempo += 1
-                if self.contador_test_poblacion <= systemRules.POPULATION_SIZE and self.universo.tiempo % systemRules.INTERVALO_ENTRENAMIENTO == 0:
-                    recompensaLast = calcular_entropia_condicional(
-                        self.universo.cargasMatriz, self.universo.energiasMatriz, self.universo.matriz_distancias) * systemRules.FACTOR_ENTROPIA
-                    if self.recompensa_actual_generacion < recompensaLast:
-                        nuevos_valores = []
-                        for clave in self.claves_parametros:
-                            nuevos_valores.append(self.predecir_valores(
-                                self.poblaciones[clave][self.contador_test_poblacion]))
-                            self.recompensas_por_clave[clave].append(
-                                recompensaLast)
-                        self.contador_test_poblacion += 1
-                        self.reiniciarUniverso(nuevos_valores)
-                    self.recompensa_actual_generacion = recompensaLast
-                elif self.contador_test_poblacion >= systemRules.POPULATION_SIZE:
-                    with lock_guardar:
-                        thread = threading.Thread(target=save_matrices_to_json, args=(
-                            self.universo.energiasMatriz, self.universo.cargasMatriz))
-                        thread.start()
-                    self.entrenar()
-                    if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_TERMINAR:
-                        print("Terminando el algoritmo debido a la falta de mejora.")
-                        break
-                    self.contador_test_poblacion = 0
-                    self.recompensas_por_clave = {clave: []
-                                                  for clave in self.claves_parametros}
+                futures = []
+                self.universos.clear()
+                try:
+                    with ThreadPoolExecutor() as executor:
+                        for neural_network in self.poblacion:
+                            future = executor.submit(
+                                self.run_universo, neural_network)
+                            futures.append(future)
+                except RuntimeError as e:
+                    print(f"Error: {e}")
+                    break  # O cualquier otro manejo de error que desees
+                recompensas = []
+                for future in futures:
+                    _, recompensa = future.result()
+                    recompensas.append(recompensa)
+                self.recompensas = recompensas
+                self.entrenar()
+                if self.generaciones_sin_mejora >= neuronalRules.GENERACIONES_PARA_TERMINAR:
+                    print("Terminando el algoritmo debido a la falta de mejora.")
+                    break
+
+                if self.generaciones_sin_mejora >= neuronalRules.GENERACIONES_PARA_REINICIO:
+                    self.reiniciar_poblacion()
+                index_max_recompensa = np.argmax(recompensas)
+                self.guardar_mejor_puntaje()
+                self.guardar_poblacion()
+                self.guardar_mejor_universo(index_max_recompensa)
             else:
                 time.sleep(1)
 
     def entrenar(self):
-        max_recompensas: List[float] = []
-        for clave in self.claves_parametros:
-            self.evolve_population(clave)
-            self.actual_total_recompensa += sum(
-                self.recompensas_por_clave[clave])
-            max_recompensas.append(max(self.recompensas_por_clave[clave]))
-        max_recompensa = max(max_recompensas)
+        self.evolve_population()
+        self.actual_total_recompensa = sum(self.recompensas)
+        max_recompensa: float = max(self.recompensas)
         if max_recompensa > self.mejor_maxima_recompensa:
             self.mejor_maxima_recompensa = max_recompensa
             self.generaciones_sin_mejora = 0
-            systemRules.VARIACION_NEURONAL_GRANDE /= 1.05
-            systemRules.VARIACION_NEURONAL_PEQUEÑA /= 0.5
         else:
             self.generaciones_sin_mejora += 1
-        if self.actual_total_recompensa > systemRules.MEJOR_TOTAL_RECOMPENSA:
-            systemRules.MEJOR_TOTAL_RECOMPENSA = self.actual_total_recompensa
-            systemRules.VARIACION_NEURONAL_GRANDE /= 2.05
-            systemRules.VARIACION_NEURONAL_PEQUEÑA /= 1.05
+        if self.actual_total_recompensa > neuronalRules.MEJOR_TOTAL_RECOMPENSA:
+            neuronalRules.MEJOR_TOTAL_RECOMPENSA = self.actual_total_recompensa
             self.guardar_mejor_puntaje()
-            self.guardar_mejor_universo()
             self.guardar_poblacion()
-        elif self.generaciones_sin_mejora % systemRules.GENERACIONES_PARA_AUMENTO_MUTACION:
-            systemRules.VARIACION_NEURONAL_GRANDE *= 2.05
-            systemRules.VARIACION_NEURONAL_PEQUEÑA *= 1.05
-
-        if self.generaciones_sin_mejora >= systemRules.GENERACIONES_PARA_REINICIO:
-            self.reiniciar_poblacion()
 
     def mutate(self, neural_network):
-        if self.generaciones_sin_mejora % systemRules.GENERACIONES_PARA_AUMENTO_MUTACION:
-            mutation_rate = systemRules.VARIACION_NEURONAL_GRANDE
+        if self.generaciones_sin_mejora % neuronalRules.GENERACIONES_PARA_AUMENTO_MUTACION == 0:
+            mutation_rate = neuronalRules.VARIACION_NEURONAL_GRANDE
         else:
-            mutation_rate = systemRules.VARIACION_NEURONAL_PEQUEÑA
+            mutation_rate = neuronalRules.VARIACION_NEURONAL_PEQUEÑA
+
+        std_dev = np.log(1 + self.generaciones_sin_mejora / 100.0)
 
         weights = neural_network.get_weights()
         for i in range(len(weights)):
-            mutation_value = np.random.normal(0, 1, weights[i].shape)
+            gradients = np.random.normal(0, std_dev, weights[i].shape)
             mutation_mask = np.random.rand(*weights[i].shape) < mutation_rate
-            weights[i] += mutation_value * mutation_mask
+            weights[i] += gradients * mutation_mask
         neural_network.set_weights(weights)
 
-    def evolve_population(self, clave):
-        nueva_poblacion = self.crear_nueva_poblacion(clave)
+    def evolve_population(self):
+        nueva_poblacion = self.crear_nueva_poblacion()
         self.aplicar_mutaciones(nueva_poblacion)
-        self.mantener_elite(clave, nueva_poblacion, num_elite=2)
+        self.mantener_elite(nueva_poblacion, num_elite=2)
 
     def crossover(self, parent1, parent2):
         child1 = self.crear_red_neuronal()
@@ -148,44 +165,44 @@ class Entrenador:
         input_data = np.array([len(self.claves_parametros) / 100],
                               dtype=float)
         return neural_network.predict(
-            input_data.reshape(1, -1)).flatten()[0]
+            input_data.reshape(1, -1)).flatten()
 
     def aplicar_mutaciones(self, nueva_poblacion):
         for nn in nueva_poblacion:
-            if random.random() < systemRules.TASA_APRENDIZAJE:
+            if random.random() < neuronalRules.TASA_APRENDIZAJE:
                 self.mutate(nn)
 
-    def mantener_elite(self, clave, nueva_poblacion, num_elite):
-        sorted_indices = np.argsort(self.recompensas_por_clave[clave])[::-1]
+    def mantener_elite(self, nueva_poblacion, num_elite):
+        sorted_indices = np.argsort(self.recompensas)[::-1]
         elite_indices = sorted_indices[:num_elite]
-        self.elite = [self.poblaciones[clave][i] for i in elite_indices]
-
-        worst_index = np.argmin(self.recompensas_por_clave[clave])
+        self.elite = [self.poblacion[i] for i in elite_indices]
+        # remplaza al peor por un elite
+        worst_index = np.argmin(self.recompensas)
         best_elite_member = self.elite[0]
         nueva_poblacion[worst_index] = best_elite_member
 
-        self.poblaciones[clave] = nueva_poblacion[:len(
-            self.poblaciones[clave])]
+        self.poblacion = nueva_poblacion[:len(
+            self.poblacion)]
 
     def crear_red_neuronal(self):
         model = Sequential([
-            Dense(systemRules.NEURONAS_DENSIDAD_ENTRADA, input_dim=1,
-                  activation='relu', kernel_initializer=RandomUniform(minval=-1, maxval=1)),
-            Dense(systemRules.NEURONAS_PROFUNDIDAD, activation='relu',
-                  kernel_initializer=RandomUniform(minval=-1, maxval=1)),
-            Dense(1, activation='sigmoid',
-                  kernel_initializer=RandomUniform(minval=-1, maxval=1))
+            Dense(neuronalRules.NEURONAS_DENSIDAD_ENTRADA, input_dim=1,
+                  activation='relu', kernel_initializer=RandomUniform(minval=-1, maxval=1, seed=np.random.randint(0, 1e6))),  # type: ignore
+            Dense(neuronalRules.NEURONAS_PROFUNDIDAD, activation='relu',
+                  kernel_initializer=RandomUniform(minval=-1, maxval=1, seed=np.random.randint(0, 1e6))),  # type: ignore
+            Dense(len(self.claves_parametros), activation='sigmoid',
+                  kernel_initializer=RandomUniform(minval=-1, maxval=1, seed=np.random.randint(0, 1e6)))  # type: ignore
         ])
         model.compile(loss='mse', optimizer='adam')
         return model
 
-    def crear_nueva_poblacion(self, clave):
+    def crear_nueva_poblacion(self):
         indices_mayores_recompensas = np.argsort(
-            self.recompensas_por_clave[clave])[-2:]
-        padres = [self.poblaciones[clave][i]
+            self.recompensas)[-2:]
+        padres = [self.poblacion[i]
                   for i in indices_mayores_recompensas]
         nueva_poblacion = []
-        for _ in range(len(self.poblaciones[clave]) // 2):
+        for _ in range(len(self.poblacion) // 2):
             child1, child2 = self.crossover(padres[0], padres[1])
             nueva_poblacion.extend([child1, child2])
 
@@ -194,18 +211,8 @@ class Entrenador:
     def reiniciar_poblacion(self):
         self.generaciones_sin_mejora = 0
         self.mejor_maxima_recompensa = float('-inf')
-        for clave in self.claves_parametros:
-            self.poblaciones[clave] = [self.crear_red_neuronal()
-                                       for _ in range(systemRules.POPULATION_SIZE)]
-
-    def reiniciarUniverso(self, mejores_nuevos_valores):
-        physics_rules = PhysicsRules()
-        for i, clave in enumerate(self.claves_parametros):
-            valor = mejores_nuevos_valores[i]
-            setattr(physics_rules, clave, valor)
-        systemRules.FILAS = systemRules.GIRD_SIZE
-        systemRules.COLUMNAS = systemRules.GIRD_SIZE
-        self.universo = Universo(physics_rules)
+        self.poblacion = [self.crear_red_neuronal()
+                          for _ in range(neuronalRules.POPULATION_SIZE)]
 
     def cargar_mejor_puntaje(self):
         try:
@@ -217,8 +224,8 @@ class Entrenador:
             self.guardar_mejor_puntaje()
 
     def guardar_mejor_puntaje(self):
-        rules = {key: getattr(systemRules, key) for key in dir(
-            systemRules) if not key.startswith('__')}
+        rules = {key: getattr(neuronalRules, key) for key in dir(
+            neuronalRules) if not key.startswith('__')}
         rules["MEJOR_TOTAL_RECOMPENSA"] = self.mejor_maxima_recompensa
         with open('system_rules.json', 'w') as file:
             json.dump(rules, file)
@@ -235,53 +242,30 @@ class Entrenador:
         if not os.path.exists('poblacion_guardada'):
             os.mkdir('poblacion_guardada')
 
-        for clave in self.claves_parametros:
-            subdirectorio = f'poblacion_guardada/{clave}'
-            if not os.path.exists(subdirectorio):
-                os.mkdir(subdirectorio)
-            for i, modelo in enumerate(self.poblaciones[clave]):
-                modelo.save_weights(f'{subdirectorio}/red_neuronal_{i}.h5')
+        subdirectorio = 'poblacion_guardada'
+        if not os.path.exists(subdirectorio):
+            os.mkdir(subdirectorio)
+
+        for i, modelo in enumerate(self.poblacion):
+            modelo.save_weights(f'{subdirectorio}/red_neuronal_{i}.h5')
 
     def cargar_poblacion(self):
-        if os.path.exists('poblacion_guardada'):
-            for clave in self.claves_parametros:
-                subdirectorio = f'poblacion_guardada/{clave}'
-                if os.path.exists(subdirectorio):
-                    for i in range(len(self.poblaciones[clave])):
-                        try:
-                            self.poblaciones[clave][i].load_weights(
-                                f'{subdirectorio}/red_neuronal_{i}.h5')
-                        except:
-                            print(
-                                f"No se pudo cargar la red neuronal {i} para {clave}")
-                else:
+        subdirectorio = 'poblacion_guardada'
+        if os.path.exists(subdirectorio):
+            for i in range(len(self.poblacion)):
+                try:
+                    self.poblacion[i].load_weights(
+                        f'{subdirectorio}/red_neuronal_{i}.h5')
+                except:
                     print(
-                        f"No hay una población guardada para cargar para {clave}.")
+                        f"No se pudo cargar la red neuronal {i} para la población.")
         else:
             print("No hay una población guardada para cargar.")
 
-    def cargar_mejor_universo(self):
-        try:
-            with open('mejor_universo.json', 'r') as file:
-                mejor_universo = json.load(file)
-                for clave, valor in mejor_universo.items():
-                    setattr(self.universo.physics_rules, clave, valor)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.guardar_mejor_universo()
-
-    def guardar_mejor_universo(self):
-        if self.elite:
-            mejores_nuevos_valores = []
-            for clave in self.claves_parametros:
-                mejores_nuevos_valores.append(self.predecir_valores(
-                    self.poblaciones[clave][self.contador_test_poblacion-1]))
-        else:
-            mejores_nuevos_valores = np.random.rand(
-                systemRules.POPULATION_SIZE)
-
-        mejor_universo = {clave: float(valor) for clave, valor in zip(
-            self.claves_parametros, mejores_nuevos_valores)}
-
+    def guardar_mejor_universo(self, index_universo):
+        mejores_nuevos_valores = self.universos[index_universo].physics_rules
+        mejor_universo = {key: float(value) for key, value in vars(
+            mejores_nuevos_valores).items()}
         with open('mejor_universo.json', 'w') as file:
             json.dump(mejor_universo, file)
 
