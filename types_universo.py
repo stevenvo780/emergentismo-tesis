@@ -5,7 +5,7 @@ class PhysicsRules():
                  ENERGIA=0.00001,
                  FLUCTUACION_MAXIMA=0.01,
                  FACTOR_ESTABILIDAD=0.1,
-                 CONSTANTE_HUBBLE=0.5,
+                 CONSTANTE_INTERACCION_VECINOS=0.5,
                  LONGITUD_DE_DECAY=0.5,
                  RUIDO_MAXIMO=0.1,
                  ):
@@ -14,7 +14,7 @@ class PhysicsRules():
         self.ENERGIA = ENERGIA
         self.FLUCTUACION_MAXIMA = FLUCTUACION_MAXIMA
         self.FACTOR_ESTABILIDAD = FACTOR_ESTABILIDAD
-        self.CONSTANTE_HUBBLE = CONSTANTE_HUBBLE
+        self.CONSTANTE_INTERACCION_VECINOS = CONSTANTE_INTERACCION_VECINOS
         self.LONGITUD_DE_DECAY = LONGITUD_DE_DECAY
         self.RUIDO_MAXIMO = RUIDO_MAXIMO
 
@@ -58,13 +58,13 @@ class NeuronalRules:
                  GENERACIONES_PARA_AUMENTO_MUTACION=10,
                  GENERACIONES_PARA_REINICIO=100,
                  GENERACIONES_PARA_TERMINAR=1000,
-                 UMBRAL_MEJORA=0.01,
+                 UMBRAL_MEJORA=1,
 
                  # Configuraciones para evitar errores
                  LIMITE_INTERCAMBIO=1,
                  MEMORIA_POR_FILA=1048,
                  FILAS_POR_MB=200,
-                 CONSTANTE_HUBBLE=500,
+                 CONSTANTE_HUBBLE=200,
                  ):
 
         # Red evolutiva

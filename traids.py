@@ -52,15 +52,18 @@ def cargar_mejor_puntaje(self):
     try:
         with open('system_rules.json', 'r') as file:
             rules = json.load(file)
-            self.mejor_maxima_recompensa = rules.get(
-                "MEJOR_TOTAL_RECOMPENSA", float('-inf'))
+            self.mejor_maxima_recompensa = rules.get("mejor_maxima_recompensa", 0.0)
+            self.actual_total_recompensa = rules.get("actual_total_recompensa", 0)
+            self.generaciones_sin_mejora = rules.get("generaciones_sin_mejora", 0)
     except (FileNotFoundError, json.JSONDecodeError):
         self.guardar_mejor_puntaje()
 
 
 def guardar_mejor_puntaje(self):
-    rules = {key: getattr(neuronalRules, key) for key in dir(
-        neuronalRules) if not key.startswith('__')}
-    rules["MEJOR_TOTAL_RECOMPENSA"] = self.mejor_maxima_recompensa
+    rules = {
+        "mejor_maxima_recompensa": self.mejor_maxima_recompensa,
+        "actual_total_recompensa": self.actual_total_recompensa,
+        "generaciones_sin_mejora": self.generaciones_sin_mejora
+    }
     with open('system_rules.json', 'w') as file:
         json.dump(rules, file)
