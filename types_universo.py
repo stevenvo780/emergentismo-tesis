@@ -50,7 +50,7 @@ class NeuronalRules:
                  POPULATION_SIZE=24,
                  NEURONAS_PROFUNDIDAD=24,
                  NEURONAS_DENSIDAD_ENTRADA=12,
-                 INTERVALO_ENTRENAMIENTO=500,
+                 INTERVALO_ENTRENAMIENTO=200,
                  FACTOR_ENTROPIA=10,
                  VARIACION_NEURONAL_GRANDE=0.1,
                  VARIACION_NEURONAL_PEQUEÑA=0.005,
@@ -64,7 +64,7 @@ class NeuronalRules:
                  LIMITE_INTERCAMBIO=1,
                  MEMORIA_POR_FILA=1048,
                  FILAS_POR_MB=200,
-                 CONSTANTE_HUBBLE=200,
+                 CONSTANTE_HUBBLE=100,
                  ):
 
         # Red evolutiva

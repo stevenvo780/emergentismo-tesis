@@ -1,1 +1,5 @@
-{"mejor_maxima_recompensa": 92.93517723937521, "actual_total_recompensa": 2041.40224709069, "generaciones_sin_mejora": 1}
+{
+  "mejor_maxima_recompensa": 87.75416870611491,
+  "actual_total_recompensa": 1544.4012477738236,
+  "generaciones_sin_mejora": 39
+}
