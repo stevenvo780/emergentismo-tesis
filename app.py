@@ -71,7 +71,7 @@ class ConfigWindow:
 
         for i, (attribute, value) in enumerate(procedural_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
-            self.screen.blit(label, (6, (410 + i * 18)))
+            self.screen.blit(label, (6, (430 + i * 18)))
 
         for i, (attribute, value) in enumerate(physics_rules):
             label = self.font.render(f"{attribute}: {value}", True, (0, 0, 0))
@@ -141,9 +141,9 @@ class App:
                         self.config_window.paused = not self.config_window.paused
                         self.config_window.update_button()
                         if self.config_window.paused:
-                            self.entrenador.pausarEntrenamiento()
+                            self.entrenador.toggleEntrenamiento(False)
                         else:
-                            self.entrenador.reanudarEntrenamiento()
+                            self.entrenador.toggleEntrenamiento(True)
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
                     if self.config_window.exit_button_rect.collidepoint((mouse_pos[0], mouse_pos[1])):

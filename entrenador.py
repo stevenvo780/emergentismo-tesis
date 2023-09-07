@@ -6,10 +6,9 @@ import random
 from threading import Thread, Lock
 from keras.models import Sequential
 from keras.layers import Dense
-from keras.initializers import RandomUniform, he_normal, glorot_uniform  # type: ignore
-import json
+from keras.initializers import RandomUniform  # type: ignore
 import time
-import os
+from traids import  guardar_mejor_universo, guardar_poblacion, cargar_poblacion, cargar_mejor_puntaje, guardar_mejor_puntaje
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 lock_guardar = Lock()
@@ -26,10 +25,10 @@ class Entrenador:
             temp_instance).keys() if not key.startswith("__")]
         del temp_instance
         self.elite = []
-        self.cargar_mejor_puntaje()
+        cargar_mejor_puntaje(self)
         self.poblacion = [self.crear_red_neuronal()
                           for _ in range(neuronalRules.POPULATION_SIZE)]
-        self.cargar_poblacion()
+        cargar_poblacion(self)
         self.pausado = False
         self.recompensa_actual_generacion = 0
         self.recompensas = []
@@ -96,9 +95,9 @@ class Entrenador:
                 if self.generaciones_sin_mejora >= neuronalRules.GENERACIONES_PARA_REINICIO:
                     self.reiniciar_poblacion()
                 index_max_recompensa = np.argmax(recompensas)
-                self.guardar_mejor_puntaje()
-                self.guardar_poblacion()
-                self.guardar_mejor_universo(index_max_recompensa)
+                guardar_mejor_puntaje(self)
+                guardar_poblacion(self)
+                guardar_mejor_universo(self, index_max_recompensa)
             else:
                 time.sleep(1)
 
@@ -106,15 +105,18 @@ class Entrenador:
         self.evolve_population()
         self.actual_total_recompensa = sum(self.recompensas)
         max_recompensa: float = max(self.recompensas)
-        if max_recompensa > self.mejor_maxima_recompensa:
+
+        mejora = max_recompensa - self.mejor_maxima_recompensa
+        if mejora > neuronalRules.UMBRAL_MEJORA:
             self.mejor_maxima_recompensa = max_recompensa
             self.generaciones_sin_mejora = 0
         else:
             self.generaciones_sin_mejora += 1
+
         if self.actual_total_recompensa > neuronalRules.MEJOR_TOTAL_RECOMPENSA:
             neuronalRules.MEJOR_TOTAL_RECOMPENSA = self.actual_total_recompensa
-            self.guardar_mejor_puntaje()
-            self.guardar_poblacion()
+            guardar_mejor_puntaje(self)
+            guardar_poblacion(self)
 
     def mutate(self, neural_network):
         if self.generaciones_sin_mejora % neuronalRules.GENERACIONES_PARA_AUMENTO_MUTACION == 0:
@@ -214,76 +216,9 @@ class Entrenador:
         self.poblacion = [self.crear_red_neuronal()
                           for _ in range(neuronalRules.POPULATION_SIZE)]
 
-    def cargar_mejor_puntaje(self):
-        try:
-            with open('system_rules.json', 'r') as file:
-                rules = json.load(file)
-                self.mejor_maxima_recompensa = rules.get(
-                    "MEJOR_TOTAL_RECOMPENSA", float('-inf'))
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.guardar_mejor_puntaje()
-
-    def guardar_mejor_puntaje(self):
-        rules = {key: getattr(neuronalRules, key) for key in dir(
-            neuronalRules) if not key.startswith('__')}
-        rules["MEJOR_TOTAL_RECOMPENSA"] = self.mejor_maxima_recompensa
-        with open('system_rules.json', 'w') as file:
-            json.dump(rules, file)
-
-    def cargar_red_neuronal(self):
-        model = self.crear_red_neuronal()
-        try:
-            model.load_weights('mejor_red_neuronal.h5')
-        except:
-            pass
-        return model
-
-    def guardar_poblacion(self):
-        if not os.path.exists('poblacion_guardada'):
-            os.mkdir('poblacion_guardada')
-
-        subdirectorio = 'poblacion_guardada'
-        if not os.path.exists(subdirectorio):
-            os.mkdir(subdirectorio)
-
-        for i, modelo in enumerate(self.poblacion):
-            modelo.save_weights(f'{subdirectorio}/red_neuronal_{i}.h5')
-
-    def cargar_poblacion(self):
-        subdirectorio = 'poblacion_guardada'
-        if os.path.exists(subdirectorio):
-            for i in range(len(self.poblacion)):
-                try:
-                    self.poblacion[i].load_weights(
-                        f'{subdirectorio}/red_neuronal_{i}.h5')
-                except:
-                    print(
-                        f"No se pudo cargar la red neuronal {i} para la población.")
-        else:
-            print("No hay una población guardada para cargar.")
-
-    def guardar_mejor_universo(self, index_universo):
-        mejores_nuevos_valores = self.universos[index_universo].physics_rules
-        mejor_universo = {key: float(value) for key, value in vars(
-            mejores_nuevos_valores).items()}
-        with open('mejor_universo.json', 'w') as file:
-            json.dump(mejor_universo, file)
-
     def iniciarEntrenamiento(self):
         self.entrenamiento_thread = Thread(target=self.big_bang)
         self.entrenamiento_thread.start()
 
-    def pausarEntrenamiento(self):
-        self.pausado = True
-
-    def reanudarEntrenamiento(self):
-        self.pausado = False
-
-
-def save_matrices_to_json(energiasMatriz, cargasMatriz):
-    with lock_guardar:
-        with open('energiasMatriz.json', 'w') as file:
-            json.dump(energiasMatriz.tolist(), file)
-
-        with open('cargasMatriz.json', 'w') as file:
-            json.dump(cargasMatriz.tolist(), file)
+    def toggleEntrenamiento(self, state: bool):
+        self.pausado = state

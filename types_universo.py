@@ -47,7 +47,7 @@ class NeuronalRules:
                  # Red evolutiva
                  MEJOR_TOTAL_RECOMPENSA=0,
                  # SIEMPRE DEBE SER PAR
-                 POPULATION_SIZE=6,
+                 POPULATION_SIZE=24,
                  NEURONAS_PROFUNDIDAD=24,
                  NEURONAS_DENSIDAD_ENTRADA=12,
                  INTERVALO_ENTRENAMIENTO=500,
@@ -58,6 +58,7 @@ class NeuronalRules:
                  GENERACIONES_PARA_AUMENTO_MUTACION=10,
                  GENERACIONES_PARA_REINICIO=100,
                  GENERACIONES_PARA_TERMINAR=1000,
+                 UMBRAL_MEJORA=0.01,
 
                  # Configuraciones para evitar errores
                  LIMITE_INTERCAMBIO=1,
@@ -78,6 +79,7 @@ class NeuronalRules:
         self.TASA_APRENDIZAJE = TASA_APRENDIZAJE
         self.GENERACIONES_PARA_AUMENTO_MUTACION = GENERACIONES_PARA_AUMENTO_MUTACION
         self.GENERACIONES_PARA_TERMINAR = GENERACIONES_PARA_TERMINAR
+        self.UMBRAL_MEJORA = UMBRAL_MEJORA
 
         # Configuraciones para evitar errores
         self.LIMITE_INTERCAMBIO = LIMITE_INTERCAMBIO
@@ -111,5 +113,6 @@ def crear_nodo(i: int, j: int, cargas: float, energia: float) -> NodoInterface:
         cargas=cargas,
         energia=energia,
     )
-    
+
+
 neuronalRules = NeuronalRules()
