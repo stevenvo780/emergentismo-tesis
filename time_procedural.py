@@ -18,7 +18,7 @@ with cp.cuda.Device(0):
         nacimiento = (cargas == 0) & (cp.random.rand(*cargas.shape)
                                       < physics_rules.PROBABILIDAD_VIDA_INICIAL * vecinos_vivos)
         supervivencia = (cargas != 0) & (cp.random.rand(*cargas.shape) < 1 / (
-            1 + cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - physics_rules.CONSTANTE_INTERACCION_VECINOS * 10))))
+            1 + cp.exp(-physics_rules.FACTOR_ESTABILIDAD * (vecinos_vivos - (physics_rules.CONSTANTE_INTERACCION_VECINOS * 10)))))
         muerte = ~nacimiento & ~supervivencia
 
         cargas[nacimiento] = cp.random.uniform(-1,
